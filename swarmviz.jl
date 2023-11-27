@@ -172,7 +172,8 @@ update_theme!(;
 )
 
 # Set up the figure
-fig = Figure()
+GLMakie.activate!(; title="SwarmViz")
+fig = Figure(resolution = (960, 600))
 swarm_animation = Axis(fig[1:3, 1:2]; xlabel="X", ylabel="Y")
 
 time_slider = SliderGrid(
@@ -185,12 +186,12 @@ video_settings = SliderGrid(
     (label="Skip", range=0:1:240, startvalue=0),
 )
 
-polarisation_axis = Axis(fig[1, 3:4]; title="Polarisation", limits=(nothing, (0, 1)))
+polarisation_axis = Axis(fig[1, 3:4]; ylabel="Polarisation", limits=(nothing, (0, 1)), xticklabelsvisible=false)
 rotational_order_axis = Axis(
-    fig[2, 3:4]; title="Rotational Order", limits=(nothing, (0, 1))
+    fig[2, 3:4]; ylabel="Rotational Order", limits=(nothing, (0, 1)), xticklabelsvisible=false
 )
 mean_interindividual_distance_axis = Axis(
-    fig[3, 3:4]; title="Mean Interindividual Distance"
+    fig[3, 3:4]; ylabel="Mean IID", xlabel="Timestep"
 )
 
 # Plot the wall of the enclosure
