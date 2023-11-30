@@ -84,6 +84,7 @@ update_theme!(;
     markercolor="#8f8f8f",
     patchcolor="#8f8f8f",
     textcolor="#8f8f8f",
+    # palette=(color=discrete_palette_penumbra(), patchcolor=discrete_palette_penumbra()),
     BoxPlot=(mediancolor=:white,),
     Violin=(mediancolor=:white,),
     Figure=(backgroundcolor=:transparent,),
@@ -168,12 +169,12 @@ update_theme!(;
         #     # ticklabelfont=lightfont,
         #     # labelfont=mediumfont,
     ),
-    resolution=(800, 500),
+    size=(960, 600),
 )
 
 # Set up the figure
 GLMakie.activate!(; title="SwarmViz")
-fig = Figure(; resolution=(960, 600))
+fig = Figure(; size=(960, 600))
 
 swarm_animation = Axis(fig[1:3, 1:2]; xlabel="X", ylabel="Y")
 
@@ -181,11 +182,25 @@ time_slider = SliderGrid(
     fig[4, 1:2], (label="Timestep", range=1:1:n_timesteps, startvalue=1)
 )
 
+video_control = Button(fig[5, 1]; label="Play/Pause")
+
 video_settings = SliderGrid(
     fig[5, 2],
     (label="FPS", range=1:1:240, startvalue=30, format="{:.1f}Hz"),
     (label="Skip", range=0:1:240, startvalue=0),
 )
+
+isrunning = Observable(false)
+on(video_control.clicks) do c
+    isrunning[] = !isrunning[]
+end
+on(video_control.clicks) do c
+    @async while isrunning[]
+        time_slider.sliders[1].value[] += (1 + video_settings.sliders[2].value[])
+        sleep(1 / video_settings.sliders[1].value[])
+        isopen(fig.scene) || break # crucial, ensures computations stop if closed window.
+    end
+end
 
 polarisation_axis = Axis(
     fig[1, 3:4]; ylabel="Polarisation", limits=(nothing, (0, 1)), xticklabelsvisible=false
@@ -210,17 +225,17 @@ poly!(
 )
 
 # Make coordinates and heading vectors responsive to the time slider
-x = lift(time_slider.sliders[1].value) do timestep
-    tracking_data[:, 2, timestep]
+x = lift(time_slider.sliders[1].value) do t
+    tracking_data[:, 2, t]
 end
-y = lift(time_slider.sliders[1].value) do timestep
-    tracking_data[:, 4, timestep]
+y = lift(time_slider.sliders[1].value) do t
+    tracking_data[:, 4, t]
 end
-u = lift(time_slider.sliders[1].value) do timestep
-    tracking_data[:, 6, timestep]
+u = lift(time_slider.sliders[1].value) do t
+    tracking_data[:, 6, t]
 end
-v = lift(time_slider.sliders[1].value) do timestep
-    tracking_data[:, 7, timestep]
+v = lift(time_slider.sliders[1].value) do t
+    tracking_data[:, 7, t]
 end
 
 # Plot the robot swarm
