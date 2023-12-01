@@ -95,8 +95,13 @@ rotational_order_axis = Axis(
 )
 mean_interindividual_distance_axis = Axis(fig[3, 3:4]; ylabel="Mean IID", xlabel="Timestep")
 
-import_button = Button(fig[4, 4]; label="Import Swarm")
-wall_button = Button(fig[5, 4]; label="Import Wall")
+buttongrid = GridLayout(fig[4:5, 3]; default_rowgap=4)
+
+import_button, wall_button, export_button =
+    buttongrid[1:3, 1] = [
+        Button(fig; label=l, halign = :left) for l in ["Import Tracking", "Import Wall", "Export Analysis"]
+    ]
+
 
 on(import_button.clicks) do c
     experiment_file = pick_file(; filterlist="*.npy")
