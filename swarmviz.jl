@@ -69,7 +69,7 @@ video_settings = SliderGrid(
 
 isplaying = Observable(false)
 on(video_control.clicks) do c
-    isplaying[] = !isrunning[]
+    isplaying[] = !isplaying[]
 end
 on(video_control.clicks) do c
     @async while isplaying[] && #TODO: check whether @async is safe/necessary
