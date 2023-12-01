@@ -7,6 +7,10 @@ using NativeFileDialog
 using NPZ
 using Statistics
 
+wall_data = zeros(2, 1)
+tracking_data = zeros(1, 7, 1)
+metrics_data = zeros(3, 1)
+
 include("src/metrics.jl")
 include("src/plotstyle.jl")
 
@@ -43,7 +47,7 @@ rotational_order = dropdims(
 mean_interindividual_distance = dropdims(
     mapslices(swarm_mean_interindividual_distance, tracking_data; dims=(1, 2)); dims=(1, 2)
 )
-metrics_data = cat(polarisation, rotational_order, mean_interindividual_distance; dims=2)
+metrics_data = cat(polarisation', rotational_order', mean_interindividual_distance'; dims=1)
 
 # Set up the figure
 GLMakie.activate!(; title="SwarmViz")
@@ -63,12 +67,12 @@ video_settings = SliderGrid(
     (label="Skip", range=0:1:240, startvalue=0),
 )
 
-isrunning = Observable(false)
+isplaying = Observable(false)
 on(video_control.clicks) do c
-    isrunning[] = !isrunning[]
+    isplaying[] = !isrunning[]
 end
 on(video_control.clicks) do c
-    @async while isrunning[] && #TODO: check whether @async is safe/necessary
+    @async while isplaying[] && #TODO: check whether @async is safe/necessary
                  time_slider.sliders[1].value[] <
                  n_timesteps - video_settings.sliders[2].value[] - 1
         set_close_to!(
@@ -114,34 +118,22 @@ poly!(
 )
 
 # Make coordinates and heading vectors responsive to the time slider
-x = lift(time_slider.sliders[1].value) do t
-    tracking_data[:, 2, t]
-end
-y = lift(time_slider.sliders[1].value) do t
-    tracking_data[:, 4, t]
-end
-u = lift(time_slider.sliders[1].value) do t
-    tracking_data[:, 6, t]
-end
-v = lift(time_slider.sliders[1].value) do t
-    tracking_data[:, 7, t]
-end
+x, y, u, v = [
+    lift(time_slider.sliders[1].value) do t
+        tracking_data[:, i, t]
+    end for i in [2, 4, 6, 7]
+]
 
 # Plot the robot swarm
 arrows!(swarm_animation, x, y, u, v; lengthscale=100)
 scatter!(swarm_animation, x, y; markersize=12, color=:black)
 
-# Plot the metrics
-lines!(polarisation_axis, 1:n_timesteps, polarisation; linewidth=1)
+# Plot the metrics #TODO: for loop
+lines!(polarisation_axis, 1:n_timesteps, metrics_data[1, :]; linewidth=1)
 vlines!(polarisation_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
-lines!(rotational_order_axis, 1:n_timesteps, rotational_order; linewidth=1)
+lines!(rotational_order_axis, 1:n_timesteps, metrics_data[2, :]; linewidth=1)
 vlines!(rotational_order_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
-lines!(
-    mean_interindividual_distance_axis,
-    1:n_timesteps,
-    mean_interindividual_distance;
-    linewidth=1,
-)
+lines!(mean_interindividual_distance_axis, 1:n_timesteps, metrics_data[3, :]; linewidth=1)
 vlines!(
     mean_interindividual_distance_axis,
     time_slider.sliders[1].value;
