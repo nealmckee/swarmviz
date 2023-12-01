@@ -7,6 +7,7 @@ using NPZ
 using Statistics
 
 include("src/metrics.jl")
+include("src/plotstyle.jl")
 
 experiment_file = "data/DatasetE2/E21/E212/E212r1_summaryd.npy"
 wall_file = "data/DatasetE2/ArenaBorders/ArenaBorders_r1_summaryd.npy"
@@ -42,102 +43,6 @@ mean_interindividual_distance = dropdims(
     mapslices(swarm_mean_interindividual_distance, tracking_data; dims=(1, 2)); dims=(1, 2)
 )
 metrics_data = cat(polarisation, rotational_order, mean_interindividual_distance; dims=2)
-
-# Plot styling
-set_aog_theme!()
-update_theme!(;
-    colormap=:batlow,
-    linecolor="#8f8f8f",
-    markercolor="#8f8f8f",
-    patchcolor="#8f8f8f",
-    textcolor="#8f8f8f",
-    # palette=(color=discrete_palette_penumbra(), patchcolor=discrete_palette_penumbra()),
-    BoxPlot=(mediancolor=:white,),
-    Violin=(mediancolor=:white,),
-    Figure=(backgroundcolor=:transparent,),
-    Axis=(
-        backgroundcolor=:transparent,
-        titlecolor="#8f8f8f",
-        xgridvisible=true,
-        ygridvisible=true,
-        xgridcolor=RGBA(143 / 255, 143 / 255, 143 / 255, 0.125),
-        ygridcolor=RGBA(143 / 255, 143 / 255, 143 / 255, 0.125),
-        leftspinevisible=false,
-        bottomspinevisible=false,
-        topspinevisible=false,
-        rightspinevisible=false,
-        bottomspinecolor="#8f8f8f",
-        leftspinecolor="#8f8f8f",
-        xtickcolor="#8f8f8f",
-        ytickcolor="#8f8f8f",
-        xticklabelcolor="#8f8f8f",
-        yticklabelcolor="#8f8f8f",
-        xlabelcolor="#8f8f8f",
-        ylabelcolor="#8f8f8f",
-        # xticklabelfont=lightfont,
-        # yticklabelfont=lightfont,
-        # xlabelfont=mediumfont,
-        # ylabelfont=mediumfont,
-        # titlefont=mediumfont,
-    ),
-    Axis3=(
-        backgroundcolor=:transparent,
-        leftspinevisible=false,
-        bottomspinevisible=false,
-        topspinevisible=false,
-        rightspinevisible=false,
-        xspinecolor_1="#8f8f8f",
-        yspinecolor_1="#8f8f8f",
-        zspinecolor_1="#8f8f8f",
-        xspinecolor_2=:transparent,
-        yspinecolor_2=:transparent,
-        zspinecolor_2=:transparent,
-        xspinecolor_3=:transparent,
-        yspinecolor_3=:transparent,
-        zspinecolor_3=:transparent,
-        xtickcolor="#8f8f8f",
-        ytickcolor="#8f8f8f",
-        ztickcolor="#8f8f8f",
-        xticklabelcolor="#8f8f8f",
-        yticklabelcolor="#8f8f8f",
-        zticklabelcolor="#8f8f8f",
-        xlabelcolor="#8f8f8f",
-        ylabelcolor="#8f8f8f",
-        zlabelcolor="#8f8f8f",
-        titlecolor="#8f8f8f",
-        xgridvisible=false,
-        ygridvisible=false,
-        zgridvisible=false,
-        xgridcolor=RGBA(143 / 255, 143 / 255, 143 / 255, 0.125),
-        ygridcolor=RGBA(143 / 255, 143 / 255, 143 / 255, 0.125),
-        zgridcolor=RGBA(143 / 255, 143 / 255, 143 / 255, 0.125),
-        # protrusions=30, # seems to be fixed in Makie
-        #     # xticklabelfont=lightfont,
-        #     # yticklabelfont=lightfont,
-        #     # zticklabelfont=lightfont,
-        #     # xlabelfont=mediumfont,
-        #     # ylabelfont=mediumfont,
-        #     # zlabelfont=mediumfont,
-        #     # titlefont=mediumfont,
-    ),
-    Legend=(
-        framevisible=false,
-        gridshalign=:left,
-        padding=(0.0f0, 0.0f0, 0.0f0, 0.0f0),
-        labelcolor="#8f8f8f",
-        titlecolor="#8f8f8f",
-        # labelfont=lightfont,
-        # titlefont=mediumfont,
-    ),
-    Colorbar=(
-        tickcolor="#8f8f8f",
-        #     flip_vertical_label = true,
-        #     spinewidth = 0,
-        #     # ticklabelfont=lightfont,
-        #     # labelfont=mediumfont,
-    ),
-    size=(960, 600),
-)
 
 # Set up the figure
 GLMakie.activate!(; title="SwarmViz")
