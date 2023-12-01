@@ -3,6 +3,7 @@ using Colors
 using Distances
 using GLMakie
 using LinearAlgebra
+using NativeFileDialog
 using NPZ
 using Statistics
 
@@ -90,6 +91,17 @@ rotational_order_axis = Axis(
 )
 mean_interindividual_distance_axis = Axis(fig[3, 3:4]; ylabel="Mean IID", xlabel="Timestep")
 
+import_button = Button(fig[4, 4]; label="Import Swarm")
+wall_button = Button(fig[5, 4]; label="Import Wall")
+
+on(import_button.clicks) do c
+    experiment_file = pick_file(; filterlist="*.npy")
+end
+
+on(wall_button.clicks) do c
+    wall_file = pick_file(; filterlist="*.npy")
+end
+
 # Plot the wall of the enclosure
 poly!(
     swarm_animation,
@@ -117,7 +129,7 @@ end
 
 # Plot the robot swarm
 arrows!(swarm_animation, x, y, u, v; lengthscale=100)
-scatter!(swarm_animation, x, y;markersize=12, color=:black)
+scatter!(swarm_animation, x, y; markersize=12, color=:black)
 
 # Plot the metrics
 lines!(polarisation_axis, 1:n_timesteps, polarisation; linewidth=1)
