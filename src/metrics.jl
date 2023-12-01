@@ -30,3 +30,10 @@ function swarm_mean_interindividual_distance(tracking_datapoint, cluster_members
     end
     return mean(pairwise(Euclidean(), tracking_datapoint[:, [2, 4]]; dims=1))
 end
+
+function swarm_max_interindividual_distance(tracking_datapoint, cluster_members=[])
+    if !isempty(cluster_members)
+        tracking_datapoint = tracking_datapoint[cluster_members, :]
+    end
+    return maximum(pairwise(Euclidean(), tracking_datapoint[:, [2, 4]]; dims=1))
+end
