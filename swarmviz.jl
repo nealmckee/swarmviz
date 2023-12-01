@@ -195,8 +195,13 @@ on(video_control.clicks) do c
     isrunning[] = !isrunning[]
 end
 on(video_control.clicks) do c
-    @async while isrunning[]
-        time_slider.sliders[1].value[] += (1 + video_settings.sliders[2].value[])
+    @async while isrunning[] && #TODO: check whether @async is safe/necessary
+                 time_slider.sliders[1].value[] <
+                 n_timesteps - video_settings.sliders[2].value[] - 1
+        set_close_to!(
+            time_slider.sliders[1],
+            time_slider.sliders[1].value[] + 1 + video_settings.sliders[2].value[],
+        )
         sleep(1 / video_settings.sliders[1].value[])
         isopen(fig.scene) || break # crucial, ensures computations stop if closed window.
     end
@@ -240,6 +245,7 @@ end
 
 # Plot the robot swarm
 arrows!(swarm_animation, x, y, u, v; lengthscale=100)
+scatter!(swarm_animation, x, y;markersize=12, color=:black)
 
 # Plot the metrics
 lines!(polarisation_axis, 1:n_timesteps, polarisation; linewidth=1)
