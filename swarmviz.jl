@@ -22,12 +22,10 @@ wall_data = Observable(zeros(2, 1))
 n_timesteps = @lift size($data.tracking, 3)
 timesteps = @lift 1:($n_timesteps)
 
-
 # Preload data for easier debugging #TODO: remove when done
 tracking_path = "data/DatasetE2/E22/E223/E223r1_summaryd.npy"
 wall_path = "data/DatasetE2/ArenaBorders/ArenaBorders_r1_summaryd.npy"
 wall_data[] = analyse_wall(wall_path)
-analyse_tracking(tracking_path)
 data[] = analyse_tracking(tracking_path)
 
 # Set up the figure #TODO make layout more organised and fix scaling of blocks
@@ -37,7 +35,7 @@ fig = Figure(; size=(960, 600))
 swarm_animation = Axis(fig[1:3, 1:2]; xlabel="X", ylabel="Y", aspect=1) #TODO: fix aspect ratio
 
 time_slider = SliderGrid(
-    fig[4, 1:2], (label="Timestep", range=timesteps[], startvalue=1); tellwidth=false
+    fig[4, 1:2], (label="Timestep", range=timesteps, startvalue=1); tellwidth=false
 )
 
 # Watch for Play/Pause status
@@ -51,7 +49,7 @@ video_settings = SliderGrid(
     (label="Skip", range=0:1:240, startvalue=0),
 )
 
-# Watch for changes in the time slider and update the plot
+# Watch for changes in the time slider to update the plot
 on(video_control.clicks) do c
     return isplaying[] = !isplaying[]
 end
@@ -89,18 +87,14 @@ import_button, wall_button, export_button =
 
 on(import_button.clicks) do c
     tracking_path = pick_file(; filterlist="npy")
-    if tracking_path != ""
-        (tracking_data[], polarisation[], rotational_order[], mean_interindividual_distance[], n_timesteps[]) = analyse_tracking(
-            tracking_path
-        )
-    end
+    tracking_path != "" && (data[] = analyse_tracking(tracking_path))
     autolimits!.([swarm_animation, pol_axis, ro_axis, miid_axis])
     set_close_to!(time_slider.sliders[1], 1)
 end
 
 on(wall_button.clicks) do c
     wall_path = pick_file(; filterlist="npy")
-    wall_path == "" || (wall_data[] = analyse_wall(wall_path))
+    wall_path == "" || (wall_data = analyse_wall(wall_path))
     autolimits!(swarm_animation)
 end
 
@@ -126,11 +120,11 @@ arrows!(swarm_animation, x, y, u, v; lengthscale=100)
 scatter!(swarm_animation, x, y; markersize=12, color=:black)
 
 # Plot the metrics #TODO: for loop
-lines!(pol_axis, timesteps, @lift float.($data.analysis[1,:]); linewidth=1)
+lines!(pol_axis, @lift float.($data.analysis[1, :]); linewidth=1)
 vlines!(pol_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
-lines!(ro_axis, timesteps, @lift float.($data.analysis[2, :]); linewidth=1)
+lines!(ro_axis, @lift float.($data.analysis[2, :]); linewidth=1)
 vlines!(ro_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
-lines!(miid_axis, timesteps, @lift float.($data.analysis[3, :]); linewidth=1)
+lines!(miid_axis, @lift float.($data.analysis[3, :]); linewidth=1)
 vlines!(miid_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
 
 # Display the figure in it’s own window
