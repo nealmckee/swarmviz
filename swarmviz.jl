@@ -11,22 +11,24 @@ include("src/metrics.jl")
 include("src/plotstyle.jl")
 include("src/analysis.jl")
 
-# Set up observables #TODO make analsis a single object
+struct SwarmData
+    tracking::Array{Float64,3} # robots x datapoints x timesteps
+    analysis::Array{Float64,2} # metrics x timesteps #TODO: better typing? another struct?
+end
+
+# Set up observables
+data = Observable(SwarmData(zeros(1, 7, 1), zeros(3, 1)))
 wall_data = Observable(zeros(2, 1))
-tracking_data = Observable(zeros(1, 7, 1))
-polarisation = Observable(zeros(1))
-rotational_order = Observable(zeros(1))
-mean_interindividual_distance = Observable(zeros(1))
-n_timesteps = Observable(1)
+n_timesteps = @lift size($data.tracking, 3)
 timesteps = @lift 1:($n_timesteps)
 
-# Preload data for debugging #TODO: remove when done
+
+# Preload data for easier debugging #TODO: remove when done
 tracking_path = "data/DatasetE2/E22/E223/E223r1_summaryd.npy"
 wall_path = "data/DatasetE2/ArenaBorders/ArenaBorders_r1_summaryd.npy"
 wall_data[] = analyse_wall(wall_path)
-(tracking_data[], polarisation[], rotational_order[], mean_interindividual_distance[], n_timesteps[]) = analyse_tracking(
-    tracking_path
-)
+analyse_tracking(tracking_path)
+data[] = analyse_tracking(tracking_path)
 
 # Set up the figure #TODO make layout more organised and fix scaling of blocks
 GLMakie.activate!(; title="SwarmViz")
@@ -34,11 +36,13 @@ fig = Figure(; size=(960, 600))
 
 swarm_animation = Axis(fig[1:3, 1:2]; xlabel="X", ylabel="Y", aspect=1) #TODO: fix aspect ratio
 
-time_slider = SliderGrid(fig[4, 1:2], (label="Timestep", range=timesteps, startvalue=1), tellwidth=false)
+time_slider = SliderGrid(
+    fig[4, 1:2], (label="Timestep", range=timesteps[], startvalue=1); tellwidth=false
+)
 
 # Watch for Play/Pause status
 isplaying = Observable(false)
-play_button_text = @lift  $isplaying[] ? "Pause" : "Play"
+play_button_text = @lift $isplaying[] ? "Pause" : "Play"
 video_control = Button(fig[5, 1]; label=play_button_text, width=60)
 
 video_settings = SliderGrid(
@@ -114,7 +118,7 @@ poly!(
 
 # Make coordinates and heading vectors responsive to the time slider
 x, y, u, v = [
-    @lift $tracking_data[:, i, $(time_slider.sliders[1].value)] for i in [2, 4, 6, 7]
+    @lift $data.tracking[:, i, $(time_slider.sliders[1].value)] for i in [2, 4, 6, 7]
 ]
 
 # Plot the robot swarm
@@ -122,11 +126,11 @@ arrows!(swarm_animation, x, y, u, v; lengthscale=100)
 scatter!(swarm_animation, x, y; markersize=12, color=:black)
 
 # Plot the metrics #TODO: for loop
-lines!(pol_axis, timesteps, polarisation; linewidth=1)
+lines!(pol_axis, timesteps, @lift float.($data.analysis[1,:]); linewidth=1)
 vlines!(pol_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
-lines!(ro_axis, timesteps, rotational_order; linewidth=1)
+lines!(ro_axis, timesteps, @lift float.($data.analysis[2, :]); linewidth=1)
 vlines!(ro_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
-lines!(miid_axis, timesteps, mean_interindividual_distance; linewidth=1)
+lines!(miid_axis, timesteps, @lift float.($data.analysis[3, :]); linewidth=1)
 vlines!(miid_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
 
 # Display the figure in it’s own window
