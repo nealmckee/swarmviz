@@ -7,47 +7,26 @@ using NativeFileDialog
 using NPZ
 using Statistics
 
-wall_data = zeros(2, 1)
-tracking_data = zeros(1, 7, 1)
-metrics_data = zeros(3, 1)
-
 include("src/metrics.jl")
 include("src/plotstyle.jl")
+include("src/analysis.jl")
 
-experiment_file = "data/DatasetE2/E21/E212/E212r1_summaryd.npy"
-wall_file = "data/DatasetE2/ArenaBorders/ArenaBorders_r1_summaryd.npy"
+# Set up observables
+wall_data = Observable(zeros(2, 1))
+tracking_data = Observable(zeros(1, 7, 1))
+polarisation = Observable(zeros(1))
+rotational_order = Observable(zeros(1))
+mean_interindividual_distance = Observable(zeros(1))
+n_timesteps = Observable(1)
+timesteps = @lift 1:($n_timesteps)
 
-# Load the data and drop singular dimensions
-tracking_data = npzread(experiment_file)[1, :, :, :]
-wall_data = npzread(wall_file)[1, 1, [2, 4], :]
-
-# Remove columns with NaN values from wall_data
-wall_data = wall_data[:, .!isnan.(wall_data[1, :])]
-wall_data = wall_data[:, .!isnan.(wall_data[2, :])]
-
-# Get the number of robots and the number of timesteps
-n_robots = size(tracking_data, 1)
-n_timesteps = size(tracking_data, 3)
-
-# Add heading vector from orientation to data
-tracking_data = cat(
-    tracking_data, reshape(cos.(tracking_data[:, 5, :]), n_robots, 1, n_timesteps); dims=2
+# Preload data for debugging #TODO: remove when done
+tracking_path = "data/DatasetE2/E22/E223/E223r1_summaryd.npy"
+wall_path = "data/DatasetE2/ArenaBorders/ArenaBorders_r1_summaryd.npy"
+wall_data[] = analyse_wall(wall_path)
+(tracking_data[], polarisation[], rotational_order[], mean_interindividual_distance[], n_timesteps[]) = analyse_tracking(
+    tracking_path
 )
-tracking_data = cat(
-    tracking_data, reshape(sin.(tracking_data[:, 5, :]), n_robots, 1, n_timesteps); dims=2
-)
-
-# precalculate all metrics for all timesteps (currently no clustering)
-polarisation = dropdims(
-    mapslices(swarm_polarisation, tracking_data; dims=(1, 2)); dims=(1, 2)
-)
-rotational_order = dropdims(
-    mapslices(swarm_rotational_order, tracking_data; dims=(1, 2)); dims=(1, 2)
-)
-mean_interindividual_distance = dropdims(
-    mapslices(swarm_mean_interindividual_distance, tracking_data; dims=(1, 2)); dims=(1, 2)
-)
-metrics_data = cat(polarisation', rotational_order', mean_interindividual_distance'; dims=1)
 
 # Set up the figure
 GLMakie.activate!(; title="SwarmViz")
@@ -55,9 +34,7 @@ fig = Figure(; size=(960, 600))
 
 swarm_animation = Axis(fig[1:3, 1:2]; xlabel="X", ylabel="Y", aspect=1) #TODO: fix aspect ratio
 
-time_slider = SliderGrid(
-    fig[4, 1:2], (label="Timestep", range=1:1:n_timesteps, startvalue=1)
-)
+time_slider = SliderGrid(fig[4, 1:2], (label="Timestep", range=timesteps, startvalue=1))
 
 video_control = Button(fig[5, 1]; label="Play/Pause")
 
@@ -74,7 +51,7 @@ end
 on(video_control.clicks) do c
     @async while isplaying[] && #TODO: check whether @async is safe/necessary
                  time_slider.sliders[1].value[] <
-                 n_timesteps - video_settings.sliders[2].value[] - 1
+                 n_timesteps[] - video_settings.sliders[2].value[] - 1
         set_close_to!(
             time_slider.sliders[1],
             time_slider.sliders[1].value[] + 1 + video_settings.sliders[2].value[],
@@ -84,16 +61,16 @@ on(video_control.clicks) do c
     end
 end
 
-polarisation_axis = Axis(
+pol_axis = Axis(
     fig[1, 3:4]; ylabel="Polarisation", limits=(nothing, (0, 1)), xticklabelsvisible=false
 )
-rotational_order_axis = Axis(
+ro_axis = Axis(
     fig[2, 3:4];
     ylabel="Rotational Order",
     limits=(nothing, (0, 1)),
     xticklabelsvisible=false,
 )
-mean_interindividual_distance_axis = Axis(fig[3, 3:4]; ylabel="Mean IID", xlabel="Timestep")
+miid_axis = Axis(fig[3, 3:4]; ylabel="Mean IID", xlabel="Timestep")
 
 buttongrid = GridLayout(fig[4:5, 3]; default_rowgap=4)
 
@@ -104,17 +81,26 @@ import_button, wall_button, export_button =
     ]
 
 on(import_button.clicks) do c
-    return experiment_file = pick_file(; filterlist="*.npy")
+    tracking_path = pick_file(; filterlist="npy")
+    if tracking_path != ""
+        (tracking_data[], polarisation[], rotational_order[], mean_interindividual_distance[], n_timesteps[]) = analyse_tracking(
+            tracking_path
+        )
+    end
+    autolimits!.([swarm_animation, pol_axis, ro_axis, miid_axis])
 end
 
 on(wall_button.clicks) do c
-    return wall_file = pick_file(; filterlist="*.npy")
+    wall_path = pick_file(; filterlist="npy")
+    wall_path == "" || (wall_data[] = analyse_wall(wall_path))
+    autolimits!(swarm_animation)
 end
 
 # Plot the wall of the enclosure
+wall_vertices = @lift Point2f.($wall_data[1, :], $wall_data[2, :])
 poly!(
     swarm_animation,
-    Point2f.(wall_data[1, :], wall_data[2, :]);
+    wall_vertices;
     color=:transparent,
     strokecolor="#8f8f8f",
     strokewidth=1,
@@ -124,9 +110,7 @@ poly!(
 
 # Make coordinates and heading vectors responsive to the time slider
 x, y, u, v = [
-    lift(time_slider.sliders[1].value) do t
-        return tracking_data[:, i, t]
-    end for i in [2, 4, 6, 7]
+    @lift $tracking_data[:, i, $(time_slider.sliders[1].value)] for i in [2, 4, 6, 7]
 ]
 
 # Plot the robot swarm
@@ -134,17 +118,12 @@ arrows!(swarm_animation, x, y, u, v; lengthscale=100)
 scatter!(swarm_animation, x, y; markersize=12, color=:black)
 
 # Plot the metrics #TODO: for loop
-lines!(polarisation_axis, 1:n_timesteps, metrics_data[1, :]; linewidth=1)
-vlines!(polarisation_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
-lines!(rotational_order_axis, 1:n_timesteps, metrics_data[2, :]; linewidth=1)
-vlines!(rotational_order_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
-lines!(mean_interindividual_distance_axis, 1:n_timesteps, metrics_data[3, :]; linewidth=1)
-vlines!(
-    mean_interindividual_distance_axis,
-    time_slider.sliders[1].value;
-    color=:black,
-    linewidth=0.5,
-)
+lines!(pol_axis, timesteps, polarisation; linewidth=1)
+vlines!(pol_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
+lines!(ro_axis, timesteps, rotational_order; linewidth=1)
+vlines!(ro_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
+lines!(miid_axis, timesteps, mean_interindividual_distance; linewidth=1)
+vlines!(miid_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
 
 # Display the figure in it’s own window
 fig
