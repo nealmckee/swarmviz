@@ -53,7 +53,7 @@ metrics_data = cat(polarisation', rotational_order', mean_interindividual_distan
 GLMakie.activate!(; title="SwarmViz")
 fig = Figure(; size=(960, 600))
 
-swarm_animation = Axis(fig[1:3, 1:2]; xlabel="X", ylabel="Y")
+swarm_animation = Axis(fig[1:3, 1:2]; xlabel="X", ylabel="Y", aspect=1) #TODO: fix aspect ratio
 
 time_slider = SliderGrid(
     fig[4, 1:2], (label="Timestep", range=1:1:n_timesteps, startvalue=1)
@@ -69,7 +69,7 @@ video_settings = SliderGrid(
 
 isplaying = Observable(false)
 on(video_control.clicks) do c
-    isplaying[] = !isplaying[]
+    return isplaying[] = !isplaying[]
 end
 on(video_control.clicks) do c
     @async while isplaying[] && #TODO: check whether @async is safe/necessary
@@ -99,16 +99,16 @@ buttongrid = GridLayout(fig[4:5, 3]; default_rowgap=4)
 
 import_button, wall_button, export_button =
     buttongrid[1:3, 1] = [
-        Button(fig; label=l, halign = :left) for l in ["Import Tracking", "Import Wall", "Export Analysis"]
+        Button(fig; label=l, halign=:left) for
+        l in ["Import Tracking", "Import Wall", "Export Analysis"]
     ]
 
-
 on(import_button.clicks) do c
-    experiment_file = pick_file(; filterlist="*.npy")
+    return experiment_file = pick_file(; filterlist="*.npy")
 end
 
 on(wall_button.clicks) do c
-    wall_file = pick_file(; filterlist="*.npy")
+    return wall_file = pick_file(; filterlist="*.npy")
 end
 
 # Plot the wall of the enclosure
@@ -125,7 +125,7 @@ poly!(
 # Make coordinates and heading vectors responsive to the time slider
 x, y, u, v = [
     lift(time_slider.sliders[1].value) do t
-        tracking_data[:, i, t]
+        return tracking_data[:, i, t]
     end for i in [2, 4, 6, 7]
 ]
 
