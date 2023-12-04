@@ -11,7 +11,7 @@ include("src/metrics.jl")
 include("src/plotstyle.jl")
 include("src/analysis.jl")
 
-# Set up observables
+# Set up observables #TODO make analsis a single object
 wall_data = Observable(zeros(2, 1))
 tracking_data = Observable(zeros(1, 7, 1))
 polarisation = Observable(zeros(1))
@@ -28,15 +28,18 @@ wall_data[] = analyse_wall(wall_path)
     tracking_path
 )
 
-# Set up the figure
+# Set up the figure #TODO make layout more organised and fix scaling of blocks
 GLMakie.activate!(; title="SwarmViz")
 fig = Figure(; size=(960, 600))
 
 swarm_animation = Axis(fig[1:3, 1:2]; xlabel="X", ylabel="Y", aspect=1) #TODO: fix aspect ratio
 
-time_slider = SliderGrid(fig[4, 1:2], (label="Timestep", range=timesteps, startvalue=1))
+time_slider = SliderGrid(fig[4, 1:2], (label="Timestep", range=timesteps, startvalue=1), tellwidth=false)
 
-video_control = Button(fig[5, 1]; label="Play/Pause")
+# Watch for Play/Pause status
+isplaying = Observable(false)
+play_button_text = @lift  $isplaying[] ? "Pause" : "Play"
+video_control = Button(fig[5, 1]; label=play_button_text, width=60)
 
 video_settings = SliderGrid(
     fig[5, 2],
@@ -44,7 +47,7 @@ video_settings = SliderGrid(
     (label="Skip", range=0:1:240, startvalue=0),
 )
 
-isplaying = Observable(false)
+# Watch for changes in the time slider and update the plot
 on(video_control.clicks) do c
     return isplaying[] = !isplaying[]
 end
@@ -57,7 +60,7 @@ on(video_control.clicks) do c
             time_slider.sliders[1].value[] + 1 + video_settings.sliders[2].value[],
         )
         sleep(1 / video_settings.sliders[1].value[])
-        isopen(fig.scene) || break # crucial, ensures computations stop if closed window.
+        isopen(fig.scene) || break # ensures computations stop if window is closed
     end
 end
 
@@ -88,6 +91,7 @@ on(import_button.clicks) do c
         )
     end
     autolimits!.([swarm_animation, pol_axis, ro_axis, miid_axis])
+    set_close_to!(time_slider.sliders[1], 1)
 end
 
 on(wall_button.clicks) do c
