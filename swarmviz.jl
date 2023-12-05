@@ -110,21 +110,27 @@ poly!(
     closed=true,
 )
 
-# Make coordinates and heading vectors responsive to the time slider
-x, y, u, v = [
-    @lift $data.tracking[:, i, $(time_slider.sliders[1].value)] for i in [2, 4, 6, 7]
-]
+# Make coordinates and rotation responsive to the time slider
+x, y, r = [@lift $data.tracking[:, i, $(time_slider.sliders[1].value)] for i in [2, 4, 5]]
 
 # Plot the robot swarm
-arrows!(swarm_animation, x, y, u, v; lengthscale=100)
-scatter!(swarm_animation, x, y; markersize=12, color=:black)
+robot_marker = Makie.Polygon(Point2f[(-1, -1), (0, 0), (-1, 1), (2, 0)])
+scatter!(
+    swarm_animation, x, y; marker=robot_marker, markersize=6, rotations=r, color=:black
+)
 
 # Plot the metrics #TODO: for loop
-lines!(pol_axis, @lift float.($data.analysis[1, :]); linewidth=1)
+lines!(
+    pol_axis, @lift float.($data.analysis[1, :]); linewidth=1, color=Makie.wong_colors()[1]
+)
 vlines!(pol_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
-lines!(ro_axis, @lift float.($data.analysis[2, :]); linewidth=1)
+lines!(
+    ro_axis, @lift float.($data.analysis[2, :]); linewidth=1, color=Makie.wong_colors()[2]
+)
 vlines!(ro_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
-lines!(miid_axis, @lift float.($data.analysis[3, :]); linewidth=1)
+lines!(
+    miid_axis, @lift float.($data.analysis[3, :]); linewidth=1, color=Makie.wong_colors()[3]
+)
 vlines!(miid_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
 
 # Display the figure in it’s own window
