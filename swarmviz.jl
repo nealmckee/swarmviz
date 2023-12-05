@@ -13,11 +13,12 @@ include("src/analysis.jl")
 
 struct SwarmData
     tracking::Array{Float64,3} # robots x datapoints x timesteps
+    derived::Array{Float64,3}
     analysis::Array{Float64,2} # metrics x timesteps #TODO: better typing? another struct?
 end
 
 # Set up observables
-data = Observable(SwarmData(zeros(1, 7, 1), zeros(3, 1)))
+data = Observable(SwarmData(zeros(1, 5, 1), zeros(1, 5, 1), zeros(3, 1)))
 wall_data = Observable(zeros(2, 1))
 n_timesteps = @lift size($data.tracking, 3)
 timesteps = @lift 1:($n_timesteps)

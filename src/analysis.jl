@@ -7,14 +7,31 @@ function analyse_tracking(filename)
     n_timesteps = size(tracking_data, 3)
 
     # Add heading vector from orientation to data
-    tracking_data = cat(
-        tracking_data,
-        reshape(cos.(tracking_data[:, 5, :]), n_robots, 1, n_timesteps);
-        dims=2,
+    heading_vector_xs = reshape(cos.(tracking_data[:, 5, :]), n_robots, 1, n_timesteps)
+    heading_vector_ys = reshape(sin.(tracking_data[:, 5, :]), n_robots, 1, n_timesteps)
+    velocity_xs = reshape(
+        cat(diff(tracking_data[:, 2, :]; dims=2), zeros(10); dims=2),
+        n_robots,
+        1,
+        n_timesteps,
     )
+    velocity_ys = reshape(
+        cat(diff(tracking_data[:, 2, :]; dims=2), zeros(10); dims=2),
+        n_robots,
+        1,
+        n_timesteps,
+    )
+    velocity_magnitude = reshape(
+        sqrt.(velocity_xs .^ 2 .+ velocity_ys .^ 2), n_robots, 1, n_timesteps
+    )
+
     tracking_data = cat(
         tracking_data,
-        reshape(sin.(tracking_data[:, 5, :]), n_robots, 1, n_timesteps);
+        heading_vector_xs,
+        heading_vector_ys,
+        velocity_xs,
+        velocity_ys,
+        velocity_magnitude,
         dims=2,
     )
 
@@ -29,13 +46,10 @@ function analyse_tracking(filename)
         mapslices(swarm_mean_interindividual_distance, tracking_data; dims=(1, 2));
         dims=(1, 2),
     )
-    metrics = cat(
-        polarisation,
-        rotational_order,
-        mean_interindividual_distance;
-        dims=2,
-    ) |> transpose
-    return SwarmData(tracking_data, metrics)
+    metrics = transpose(
+        cat(polarisation, rotational_order, mean_interindividual_distance; dims=2)
+    )
+    return SwarmData(tracking_data[:,1:5,:], tracking_data[:,5:end,:], metrics)
 end
 
 function analyse_wall(filename)
