@@ -33,52 +33,61 @@ data[] = analyse_tracking(tracking_path)
 GLMakie.activate!(; title="SwarmViz")
 fig = Figure(; size=(960, 600))
 
-swarm_animation = Axis(fig[1:3, 1:2]; xlabel="X", ylabel="Y", aspect=1) #TODO: fix aspect ratio
-
+swarm_animation = Axis(fig[1, 1]; xlabel="X", ylabel="Y", autolimitaspect=1) #TODO: fix aspect ratio
+animation_controls = GridLayout(fig[2, 1], tellwidth=false)
 time_slider = SliderGrid(
-    fig[4, 1:2], (label="Timestep", range=timesteps, startvalue=1); tellwidth=false
+    animation_controls[1, 1:2],
+    (label="Timestep", range=timesteps, startvalue=1);
 )
 
 # Watch for Play/Pause status
 isplaying = Observable(false)
 play_button_text = @lift $isplaying[] ? "Pause" : "Play"
-video_control = Button(fig[5, 1]; label=play_button_text, width=60)
+play_button = Button(animation_controls[2, 1]; label=play_button_text, width=60)
 
-video_settings = SliderGrid(
-    fig[5, 2],
+animation_settings = SliderGrid(
+    animation_controls[2, 2],
     (label="FPS", range=1:1:240, startvalue=30, format="{:.1f}Hz"),
-    (label="Skip", range=0:1:240, startvalue=0),
+    (label="Skip", range=0:1:240, startvalue=0);
+    tellwidth=false,
 )
 
 # Watch for changes in the time slider to update the plot
-on(video_control.clicks) do c
+on(play_button.clicks) do c
     return isplaying[] = !isplaying[]
 end
-on(video_control.clicks) do c
+on(play_button.clicks) do c
     @async while isplaying[] && #TODO: check whether @async is safe/necessary
                  time_slider.sliders[1].value[] <
-                 n_timesteps[] - video_settings.sliders[2].value[] - 1
+                 n_timesteps[] - animation_settings.sliders[2].value[] - 1
         set_close_to!(
             time_slider.sliders[1],
-            time_slider.sliders[1].value[] + 1 + video_settings.sliders[2].value[],
+            time_slider.sliders[1].value[] + 1 + animation_settings.sliders[2].value[],
         )
-        sleep(1 / video_settings.sliders[1].value[])
+        sleep(1 / animation_settings.sliders[1].value[])
         isopen(fig.scene) || break # ensures computations stop if window is closed
     end
 end
 
+metrics_grid = GridLayout(fig[1, 2])
 pol_axis = Axis(
-    fig[1, 3:4]; ylabel="Polarisation", limits=(nothing, (0, 1)), xticklabelsvisible=false
+    metrics_grid[1, 1];
+    ylabel="Polarisation",
+    limits=(nothing, (0, 1)),
+    xticklabelsvisible=false,
 )
 ro_axis = Axis(
-    fig[2, 3:4];
+    metrics_grid[2, 1];
     ylabel="Rotational Order",
     limits=(nothing, (0, 1)),
     xticklabelsvisible=false,
 )
-miid_axis = Axis(fig[3, 3:4]; ylabel="Mean IID", xlabel="Timestep")
+miid_axis = Axis(metrics_grid[3, 1]; ylabel="Mean IID", xlabel="Timestep")
+linkxaxes!(pol_axis, ro_axis, miid_axis)
 
-buttongrid = GridLayout(fig[4:5, 3]; default_rowgap=4)
+
+file_controls = GridLayout(fig[2, 2])
+buttongrid = GridLayout(file_controls[1, 1]; default_rowgap=4)
 
 import_button, wall_button, export_button =
     buttongrid[1:3, 1] = [
@@ -133,6 +142,9 @@ lines!(
     miid_axis, @lift float.($data.analysis[3, :]); linewidth=1, color=Makie.wong_colors()[3]
 )
 vlines!(miid_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
+
+colsize!(fig.layout, 1, Relative(0.5))
+colsize!(fig.layout, 2, Relative(0.5))
 
 # Display the figure in it’s own window
 fig
