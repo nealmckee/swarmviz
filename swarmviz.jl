@@ -146,17 +146,8 @@ poly!(
 
 # Make coordinates and rotation responsive to the time slider
 x, y, r = [@lift $data.tracking[:, i, $(time_slider.sliders[1].value)] for i in [2, 4, 5]]
-
-# Plot the robot swarm
-robot_marker = Makie.Polygon(Point2f[(-1, -1), (0, 0), (-1, 1), (2, 0)])
-scatter!(
-	swarm_animation,
-	x,
-	y;
-	marker=robot_marker,
-	markersize=6,
-	rotations=r,
-	color=@lift (if size($agent_collisions, 1) != size($data.tracking, 1) || #TODO: refactor
+c = @lift ( #TODO: refactor
+	if size($agent_collisions, 1) != size($data.tracking, 1) ||
 		size($wall_collisions, 1) != size($data.tracking, 1)
 		repeat([RGBA(0, 0, 0)], size($data.tracking, 1))
 	else
@@ -187,7 +178,11 @@ scatter!(
 			end for i in 1:size($wall_collisions, 1)
 		]
 	end
-))
+)
+
+# Plot the robot swarm
+robot_marker = Makie.Polygon(Point2f[(-1, -1), (0, 0), (-1, 1), (2, 0)])
+scatter!(swarm_animation, x, y; marker=robot_marker, markersize=6, rotations=r, color=c)
 
 # Plot the metrics #TODO: for loop
 lines!(
