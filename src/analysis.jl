@@ -1,6 +1,6 @@
 function analyse_tracking(filename)
     # Load the data and drop singular dimensions
-    tracking_data = npzread(filename)[1, :, :, :]
+    tracking_data = npzread(filename)[1, :, 1:5, :]
 
     # Get the number of robots and the number of timesteps
     n_robots = size(tracking_data, 1)
@@ -58,4 +58,16 @@ function analyse_wall(filename)
     wd = wd[:, .!isnan.(wd[1, :])]
     wd = wd[:, .!isnan.(wd[2, :])]
     return wd
+end
+
+function process_collisions(filename)
+    collision_dict = JSON.parse(String(read("data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_warefl.json")))["0"]
+    collisions = falses(length(keys(collision_dict)), maximum(vcat(values(collision_dict)...)))
+    for (robot, collision_list) in collision_dict
+        robot_row = parse(Int, robot) + 1
+        for collision in collision_list
+            collisions[robot_row, collision] = true
+        end
+    end
+    return collisions
 end
