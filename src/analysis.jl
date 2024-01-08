@@ -61,7 +61,7 @@ function analyse_wall(filename)
 end
 
 function process_collisions(filename)
-    collision_dict = JSON.parse(String(read("data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_warefl.json")))["0"]
+    collision_dict = JSON.parse(String(read(filename)))["0"]
     collisions = falses(length(keys(collision_dict)), maximum(vcat(values(collision_dict)...)))
     for (robot, collision_list) in collision_dict
         robot_row = parse(Int, robot) + 1
