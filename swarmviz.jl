@@ -36,11 +36,11 @@ data[] = analyse_tracking(tracking_path)
 wall_collisions[] = process_collisions(wall_collisons_path)
 agent_collisions[] = process_collisions(agent_collisons_path)
 
-# Set up the figure #TODO make layout more organised and fix scaling of blocks
+# Set up the figure
 GLMakie.activate!(; title="SwarmViz")
 fig = Figure(; size=(960, 600))
 
-swarm_animation = Axis(fig[1, 1]; xlabel="X", ylabel="Y", autolimitaspect=1) #TODO: fix aspect ratio
+swarm_animation = Axis(fig[1, 1]; xlabel="X", ylabel="Y", autolimitaspect=1)
 animation_controls = GridLayout(fig[2, 1]; tellwidth=false)
 time_slider = SliderGrid(
 	animation_controls[1, 1:2], (label="Timestep", range=timesteps, startvalue=1);
