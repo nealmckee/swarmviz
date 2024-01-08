@@ -145,12 +145,14 @@ scatter!(
 	markersize=6,
 	rotations=r,
 	color=(@lift [
-        if $agent_collisions[i, $(time_slider.sliders[1].value)]
-            Makie.wong_colors()[6]
-		elseif $wall_collisions[i, $(time_slider.sliders[1].value)]
+		if checkbounds(Bool, $agent_collisions, 1, $(time_slider.sliders[1].value)) &&
+			$agent_collisions[i, $(time_slider.sliders[1].value)]
+			Makie.wong_colors()[6]
+		elseif checkbounds(Bool, $wall_collisions, 1, $(time_slider.sliders[1].value)) &&
+			$wall_collisions[i, $(time_slider.sliders[1].value)]
 			Makie.wong_colors()[7]
 		else
-			RGBA(0,0,0)
+			RGBA(0, 0, 0)
 		end for i in 1:size($wall_collisions, 1)
 	]),
 )
