@@ -28,7 +28,7 @@ timesteps = @lift 1:($n_timesteps)
 
 # Preload data for easier debugging #TODO: remove when done
 tracking_path = "data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_summaryd.npy"
-wall_path = "data/DatasetE2/ArenaBorders/ArenaBorders_r1_summaryd.npy"
+wall_path = "data/A0_09_B0_0/w3_summaryd.npy"
 wall_collisons_path = "data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_warefl.json"
 agent_collisons_path = "data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_aarefl.json"
 wall_data[] = analyse_wall(wall_path)
