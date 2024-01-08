@@ -21,8 +21,8 @@ end
 # Set up observables
 data = Observable(SwarmData(zeros(1, 5, 1), zeros(1, 5, 1), zeros(3, 1)))
 wall_data = Observable(zeros(2, 1))
-wall_collisions = Observable(BitArray(undef, 1, 1))
-agent_collisions = Observable(BitArray(undef, 1, 1))
+wall_collisions = Observable(falses(1, 1))
+agent_collisions = Observable(falses(1, 1))
 n_timesteps = @lift size($data.tracking, 3)
 timesteps = @lift 1:($n_timesteps)
 
@@ -33,8 +33,8 @@ wall_collisons_path = "data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_warefl.json"
 agent_collisons_path = "data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_aarefl.json"
 wall_data[] = analyse_wall(wall_path)
 data[] = analyse_tracking(tracking_path)
-wall_collisions[] = process_collisions(wall_collisons_path)
-agent_collisions[] = process_collisions(agent_collisons_path)
+# wall_collisions[] = process_collisions(wall_collisons_path)
+# agent_collisions[] = process_collisions(agent_collisons_path)
 
 # Set up the figure
 GLMakie.activate!(; title="SwarmViz")
@@ -94,10 +94,10 @@ linkxaxes!(pol_axis, ro_axis, miid_axis)
 file_controls = GridLayout(fig[2, 2])
 buttongrid = GridLayout(file_controls[1, 1]; default_rowgap=4)
 
-import_button, wall_button, export_button =
+import_button, wall_button, collision_button =
 	buttongrid[1:3, 1] = [
 		Button(fig; label=l, halign=:left) for
-		l in ["Import Tracking", "Import Wall", "Export Analysis"]
+		l in ["Import Tracking", "Import Wall", "Import Collisions"]
 	]
 
 on(import_button.clicks) do c
@@ -118,6 +118,18 @@ on(wall_button.clicks) do c
 	wall_path = pick_file(; filterlist="npy")
 	wall_path == "" || (wall_data[] = analyse_wall(wall_path))
 	autolimits!(swarm_animation)
+end
+
+on(collision_button.clicks) do c
+	collisions_folder = pick_folder()
+	wall_collisons_path = filter(
+		x -> occursin(r".*warefl.json", x), readdir(collisions_folder; join=true)
+	)[1]
+	agent_collisons_path = filter(
+		x -> occursin(r".*aarefl.json", x), readdir(collisions_folder; join=true)
+	)[1]
+	wall_collisions[] = process_collisions(wall_collisons_path)
+	agent_collisions[] = process_collisions(agent_collisons_path)
 end
 
 # Plot the wall of the enclosure
@@ -144,31 +156,38 @@ scatter!(
 	marker=robot_marker,
 	markersize=6,
 	rotations=r,
-	color=(@lift [
-		if checkbounds(Bool, $agent_collisions, 1, $(time_slider.sliders[1].value)) && any(
-			$agent_collisions[
-				i,
-				($(time_slider.sliders[1].value) - animation_settings.sliders[2].value[]):($(
-					time_slider.sliders[1].value
-				)),
-			],
-		)
-			Makie.wong_colors()[6]
-		elseif checkbounds(Bool, $wall_collisions, 1, $(time_slider.sliders[1].value)) &&
-			any(
-			$wall_collisions[
-				i,
-				($(time_slider.sliders[1].value) - animation_settings.sliders[2].value[]):($(
-					time_slider.sliders[1].value
-				)),
-			],
-		)
-			Makie.wong_colors()[7]
-		else
-			RGBA(0, 0, 0)
-		end for i in 1:size($wall_collisions, 1)
-	]),
-)
+	color=@lift (if size($agent_collisions, 1) != size($data.tracking, 1) || #TODO: refactor
+		size($wall_collisions, 1) != size($data.tracking, 1)
+		repeat([RGBA(0, 0, 0)], size($data.tracking, 1))
+	else
+		[
+			if checkbounds(Bool, $agent_collisions, 1, $(time_slider.sliders[1].value)) &&
+				any(
+				$agent_collisions[
+					i,
+					($(time_slider.sliders[1].value) - animation_settings.sliders[2].value[]):($(
+						time_slider.sliders[1].value
+					)),
+				],
+			)
+				Makie.wong_colors()[6]
+			elseif checkbounds(
+				Bool, $wall_collisions, 1, $(time_slider.sliders[1].value)
+			) && any(
+				$wall_collisions[
+					i,
+					($(time_slider.sliders[1].value) - animation_settings.sliders[2].value[]):($(
+						time_slider.sliders[1].value
+					)),
+				],
+			)
+				Makie.wong_colors()[7]
+			else
+				RGBA(0, 0, 0)
+			end for i in 1:size($wall_collisions, 1)
+		]
+	end
+))
 
 # Plot the metrics #TODO: for loop
 lines!(
