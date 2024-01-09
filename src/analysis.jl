@@ -10,13 +10,13 @@ function analyse_tracking(filename)
 	heading_vector_xs = reshape(cos.(tracking_data[:, 5, :]), n_robots, 1, n_timesteps)
 	heading_vector_ys = reshape(sin.(tracking_data[:, 5, :]), n_robots, 1, n_timesteps)
 	velocity_xs = reshape(
-		cat(zeros(10), diff(tracking_data[:, 2, :]; dims=2); dims=2),
+		cat(zeros(n_robots), diff(tracking_data[:, 2, :]; dims=2); dims=2),
 		n_robots,
 		1,
 		n_timesteps,
 	)
 	velocity_ys = reshape(
-		cat(zeros(10), diff(tracking_data[:, 2, :]; dims=2); dims=2),
+		cat(zeros(n_robots), diff(tracking_data[:, 2, :]; dims=2); dims=2),
 		n_robots,
 		1,
 		n_timesteps,
@@ -25,25 +25,25 @@ function analyse_tracking(filename)
 		sqrt.(velocity_xs .^ 2 .+ velocity_ys .^ 2), n_robots, 1, n_timesteps
 	)
 	acceleration_xs = reshape(
-		cat(diff(velocity_xs; dims=2), zeros(10); dims=2), n_robots, 1, n_timesteps
+		cat(diff(velocity_xs; dims=3), zeros(n_robots); dims=3), n_robots, 1, n_timesteps
 	)
 	acceleration_ys = reshape(
-		cat(diff(tracking_data[:, 2, :]; dims=2), zeros(10); dims=2),
-		n_robots,
-		1,
-		n_timesteps,
+		cat(diff(velocity_ys; dims=3), zeros(n_robots); dims=3), n_robots, 1, n_timesteps
 	)
 	acceleration_magnitude = reshape(
 		sqrt.(acceleration_xs .^ 2 .+ acceleration_ys .^ 2), n_robots, 1, n_timesteps
 	)
 	angular_velocity = reshape(
-		cat(zeros(10), diff(tracking_data[:, 5, :]; dims=2); dims=2),
+		cat(zeros(n_robots), diff(tracking_data[:, 5, :]; dims=2); dims=2),
 		n_robots,
 		1,
 		n_timesteps,
 	)
 	angular_acceleration = reshape(
-		cat(diff(angular_velocity; dims=2), zeros(10); dims=2), n_robots, 1, n_timesteps
+		cat(diff(angular_velocity; dims=3), zeros(n_robots); dims=3),
+		n_robots,
+		1,
+		n_timesteps,
 	)
 
 	tracking_data = cat(
