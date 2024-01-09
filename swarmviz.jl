@@ -33,17 +33,17 @@ wall_collisons_path = "data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_warefl.json"
 agent_collisons_path = "data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_aarefl.json"
 wall_data[] = analyse_wall(wall_path)
 data[] = analyse_tracking(tracking_path)
-# wall_collisions[] = process_collisions(wall_collisons_path)
-# agent_collisions[] = process_collisions(agent_collisons_path)
+wall_collisions[] = process_collisions(wall_collisons_path)
+agent_collisions[] = process_collisions(agent_collisons_path)
 
 # Set up the figure
 GLMakie.activate!(; title="SwarmViz")
 fig = Figure(; size=(960, 600))
 
 swarm_animation = Axis(fig[1, 1]; xlabel="X", ylabel="Y", autolimitaspect=1)
-animation_controls = GridLayout(fig[2, 1]; tellwidth=false)
+animation_controls = GridLayout(fig[2, 1]; default_rowgap=12, default_colgap=12)
 time_slider = SliderGrid(
-	animation_controls[1, 1:2], (label="Timestep", range=timesteps, startvalue=1);
+	animation_controls[1, 1:3], (label="Timestep", range=timesteps, startvalue=1)
 )
 
 # Watch for Play/Pause status
@@ -53,14 +53,22 @@ play_button = Button(animation_controls[2, 1]; label=play_button_text, width=60)
 
 animation_settings = SliderGrid(
 	animation_controls[2, 2],
-	(label="FPS", range=1:1:240, startvalue=30, format="{:.1f}Hz"),
-	(label="Skip", range=0:1:240, startvalue=0);
-	tellwidth=false,
+	(label="FPS", range=1:1:120, startvalue=30),
+	(label="Skip", range=0:1:99, startvalue=0),
+)
+animation_toggles = [Toggle(fig) for _ in 1:4]
+animation_controls[2:end, 3] = grid!(
+	hcat(
+		animation_toggles,
+		[Label(fig, l; halign=:left) for l in ["Collisions", "Polygon", "COM", "Radius"]],
+	);
+	default_rowgap=3,
+	default_colgap=3,
 )
 
 # Watch for changes in the time slider to update the plot
 on(play_button.clicks) do c
-	return isplaying[] = !isplaying[]
+	isplaying[] = !isplaying[]
 end
 on(play_button.clicks) do c
 	@async while isplaying[] && #TODO: check whether @async is safe/necessary
@@ -91,8 +99,8 @@ ro_axis = Axis(
 miid_axis = Axis(metrics_grid[3, 1]; ylabel="Mean IID", xlabel="Timestep")
 linkxaxes!(pol_axis, ro_axis, miid_axis)
 
-file_controls = GridLayout(fig[2, 2])
-buttongrid = GridLayout(file_controls[1, 1]; default_rowgap=4)
+data_controls = GridLayout(fig[2, 2])
+buttongrid = GridLayout(data_controls[1, 1]; default_rowgap=2)
 
 import_button, wall_button, collision_button =
 	buttongrid[1:3, 1] = [
@@ -148,7 +156,8 @@ poly!(
 x, y, r = [@lift $data.tracking[:, i, $(time_slider.sliders[1].value)] for i in [2, 4, 5]]
 c = @lift ( #TODO: refactor
 	if size($agent_collisions, 1) != size($data.tracking, 1) ||
-		size($wall_collisions, 1) != size($data.tracking, 1)
+		size($wall_collisions, 1) != size($data.tracking, 1) ||
+		!$(animation_toggles[1].active)
 		repeat([RGBA(0, 0, 0)], size($data.tracking, 1))
 	else
 		[
