@@ -88,11 +88,20 @@ end
 metrics_grid = GridLayout(fig[1, 2])
 metric_axis1 = Axis(metrics_grid[1, 1]; xticklabelsvisible=false)
 metric_axis2 = Axis(metrics_grid[2, 1]; xticklabelsvisible=false)
-metric_axis3 = Axis(metrics_grid[3, 1]; xlabel="Timestep")
-linkxaxes!(metric_axis1, metric_axis2, metric_axis3)
+metric_axis3 = Axis(metrics_grid[3, 1]; xticklabelsvisible=false)
+collisions_axis = Axis(
+	metrics_grid[4, 1];
+	xlabel="Timestep",
+	yticklabelsvisible=false,
+    yticksvisible=false,
+	height=10,
+	ygridvisible=false,
+    xgridvisible=false,
+)
+linkxaxes!(metric_axis1, metric_axis2, metric_axis3, collisions_axis)
 
 data_controls = GridLayout(fig[2, 2]; default_rowgap=2)
-buttongrid = GridLayout(data_controls[1:3, 2]; default_rowgap=2)
+buttongrid = GridLayout(data_controls[1:3, :]; default_rowgap=2)
 
 import_button, wall_button, collision_button =
 	buttongrid[1:3, 1] = [
@@ -139,7 +148,7 @@ metric_menu1 = Menu(
 	default="Polarisation",
 	width=150,
 	height=18,
-	halign=:left,
+	halign=:center,
 	prompt="Select Metric...",
 )
 metric_menu2 = Menu(
@@ -148,7 +157,7 @@ metric_menu2 = Menu(
 	default="Rotational Order",
 	width=150,
 	height=18,
-	halign=:left,
+	halign=:center,
 	prompt="Select Metric...",
 )
 metric_menu3 = Menu(
@@ -157,7 +166,7 @@ metric_menu3 = Menu(
 	default="Mean IID",
 	width=150,
 	height=18,
-	halign=:left,
+	halign=:center,
 	prompt="Select Metric...",
 )
 
@@ -171,6 +180,7 @@ poly!(
 	strokewidth=1,
 	linestyle=:dot,
 	closed=true,
+	depth=-1,
 )
 
 # Make coordinates and rotation responsive to the time slider
@@ -219,15 +229,17 @@ c = @lift ( #TODO: refactor
 # Plot the robot swarm
 robot_marker = Makie.Polygon(Point2f[(-1, -1), (0, 0), (-1, 1), (2, 0)])
 #TODO: move center to center of mass
+#TODO: switch collisions to glow instead of color?
 scatter!(swarm_animation, x, y; marker=robot_marker, markersize=6, rotations=r, color=c)
 
 # plot the surrounding polygon and connect to toggle
-surrounding_polygon = poly!( #TODO: plot styling (feedback?)
+surrounding_polygon = poly!(
 	swarm_animation,
 	@lift Point2f.($data.geometry["Surrounding Polygon"][$(time_slider.sliders[1].value)]);
 	color=:transparent,
-	strokecolor=Makie.wong_colors()[4],
+	strokecolor="#8f8f8f",
 	strokewidth=1,
+	linestyle=:dash,
 	closed=true,
 )
 connect!(surrounding_polygon.visible, animation_toggles[2].active)
@@ -236,8 +248,8 @@ connect!(surrounding_polygon.visible, animation_toggles[2].active)
 center_of_mass = scatter!( #TODO: plot styling (feedback?)
 	swarm_animation,
 	@lift Point2f($data.geometry["Center of Mass"][$(time_slider.sliders[1].value)]);
-	color=Makie.wong_colors()[5],
-	markersize=10,
+	color="#8f8f8f",
+	markersize=12,
 	marker=:xcross,
 )
 connect!(center_of_mass.visible, animation_toggles[3].active)
@@ -250,12 +262,12 @@ diameter = lines!( #TODO: plot styling (feedback?)
 			Tuple($data.geometry["Furthest Robots"][$(time_slider.sliders[1].value)])...
 		]]
 	);
-	color=Makie.wong_colors()[6],
+	color="#8f8f8f",
 	linewidth=1,
 )
 connect!(diameter.visible, animation_toggles[4].active)
 
-metric_menu1.options[][metric_menu1.i_selected[]][1]
+# plot the metrics when one is chosen from the corresponding menu
 for (i, (menu, axis)) in enumerate(
 	zip(
 		[metric_menu1, metric_menu2, metric_menu3],
@@ -279,10 +291,35 @@ end
 
 # plot timestep markers
 for axis in [metric_axis1, metric_axis2, metric_axis3]
-    vlines!(axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
+	vlines!(axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
 end
+#TODO: add rectangle in collisions plot?
 
+# plot collisions
+agent_collisions_plot = vlines!(
+    collisions_axis,
+    @lift findall(
+        reduce(|, $agent_collisions, dims = 1)[1,:]
+    );
+    color=Makie.wong_colors()[6],
+    linewidth=0.1,
+    depth = 2,
+)
+wall_collisions_plot = vlines!(
+    collisions_axis,
+    @lift findall(
+        reduce(|, $wall_collisions, dims = 1)[1,:]
+    );
+    color=Makie.wong_colors()[7],
+    linewidth=0.1,
+    depth = 1,
+)
+connect!(agent_collisions_plot.visible, animation_toggles[1].active)
+connect!(wall_collisions_plot.visible, animation_toggles[1].active)
+
+#adjust the width of the column with the swarm animation
 colsize!(fig.layout, 1, Relative(0.5))
+colsize!(fig.layout, 2, Relative(0.5))
 
 # Display the figure in it’s own window
 fig
