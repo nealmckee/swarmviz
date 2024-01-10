@@ -1,5 +1,7 @@
 import AlgebraOfGraphics: set_aog_theme!
 using Colors
+using CSV
+using DataFrames
 using Distances
 using GLMakie
 using JSON
@@ -101,12 +103,12 @@ collisions_axis = Axis(
 linkxaxes!(metric_axis1, metric_axis2, metric_axis3, collisions_axis)
 
 data_controls = GridLayout(fig[2, 2]; default_rowgap=2)
-buttongrid = GridLayout(data_controls[1:3, :]; default_rowgap=2)
+buttongrid = GridLayout(data_controls[:, :]; default_rowgap=2)
 
-import_button, wall_button, collision_button =
-	buttongrid[1:3, 1] = [
+import_button, wall_button, collision_button, export_metrics_button =
+	buttongrid[1:2, 1:2] = [
 		Button(fig; label=l, halign=:left) for
-		l in ["Import Tracking", "Import Wall", "Import Collisions"]
+		l in ["Import Tracking", "Import Wall", "Import Collisions", "Export Metrics"]
 	]
 
 on(import_button.clicks) do c
@@ -139,6 +141,11 @@ on(collision_button.clicks) do c
 	)[1]
 	wall_collisions[] = process_collisions(wall_collisons_path)
 	agent_collisions[] = process_collisions(agent_collisons_path)
+end
+
+on(export_metrics_button.clicks) do c
+    metrics_folder = pick_folder()
+    CSV.write(joinpath(metrics_folder, "metrics.csv"), DataFrame(data[].analysis))
 end
 
 # menus to select which metrics to plot
