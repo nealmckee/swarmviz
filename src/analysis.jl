@@ -1,3 +1,5 @@
+import LazySets: convex_hull
+
 function analyse_tracking(filename)
 	# Load the data and drop singular dimensions
 	tracking_data = npzread(filename)[1, :, 1:5, :]
@@ -72,10 +74,65 @@ function analyse_tracking(filename)
 		mapslices(swarm_mean_interindividual_distance, tracking_data; dims=(1, 2));
 		dims=(1, 2),
 	)
+
+	surrounding_polygon =
+		convex_hull.([
+			[[tracking_data[r, 2, t], tracking_data[r, 4, t]] for r in 1:n_robots] for
+			t in 1:n_timesteps
+		])
+	center_of_mass = [
+		[sum(tracking_data[:, 2, t]), sum(tracking_data[:, 4, t])] / n_robots for
+		t in 1:n_timesteps
+	]
+	furthest = [
+		argmax(pairwise(Euclidean(), hcat(surrounding_polygon[t]...)'; dims=1)) for
+		t in 1:n_timesteps
+	]
+	radius = [
+		Euclidean()(surrounding_polygon[t][[Tuple(furthest[t])...]]...) for
+		t in 1:n_timesteps
+	]
+	area = [
+		0.5 * abs(
+			sum(
+				surrounding_polygon[t][i][1] *
+				surrounding_polygon[t][i % length(surrounding_polygon[t]) + 1][2] -
+				surrounding_polygon[t][i % length(surrounding_polygon[t]) + 1][1] *
+				surrounding_polygon[t][i][2] for i in 1:length(surrounding_polygon[t])
+			),
+		) for t in 1:n_timesteps
+	]
+	roundness = [
+		4 * pi * area[t] /
+		sum(
+			colwise(
+				Euclidean(),
+				hcat(surrounding_polygon[t]...),
+				hcat(surrounding_polygon[t][2:end]..., surrounding_polygon[t][1]),
+			),
+		)^2 for t in 1:n_timesteps
+	]
+
 	metrics = transpose(
-		cat(polarisation, rotational_order, mean_interindividual_distance; dims=2)
+		cat(
+			polarisation,
+			rotational_order,
+			mean_interindividual_distance,
+			radius,
+			area,
+            roundness;
+			dims=2,
+		),
 	)
-	return SwarmData(tracking_data[:, 1:5, :], tracking_data[:, 5:end, :], metrics)
+	geometry = Dict(
+		"Surrounding Polygon" => surrounding_polygon,
+		"Center of Mass" => center_of_mass,
+		"Furthest Robots" => furthest,
+	)
+
+	return SwarmData(
+		tracking_data[:, 1:5, :], tracking_data[:, 5:end, :], metrics, geometry
+	)
 end
 
 function analyse_wall(filename)

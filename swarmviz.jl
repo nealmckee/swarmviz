@@ -1,4 +1,4 @@
-using AlgebraOfGraphics
+import AlgebraOfGraphics: set_aog_theme!
 using Colors
 using Distances
 using GLMakie
@@ -15,11 +15,12 @@ include("src/analysis.jl")
 struct SwarmData
 	tracking::Array{Float64,3} # robots x properties x timesteps
 	derived::Array{Float64,3} # robots x properties x timesteps
-	analysis::Array{Float64,2} # metrics x timesteps #TODO: better typing? another struct?
+	analysis::Array{Float64,2} # metrics x timesteps #TODO: switch to dict?
+	geometry::Dict{String,Any} # metrics, data
 end
 
 # Set up observables
-data = Observable(SwarmData(zeros(1, 5, 1), zeros(1, 5, 1), zeros(3, 1)))
+data = Observable(SwarmData(zeros(1, 5, 1), zeros(1, 5, 1), zeros(3, 1), Dict()))
 wall_data = Observable(zeros(2, 1))
 wall_collisions = Observable(falses(1, 1))
 agent_collisions = Observable(falses(1, 1))
