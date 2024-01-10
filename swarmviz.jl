@@ -44,11 +44,9 @@ GLMakie.activate!(; title="SwarmViz")
 fig = Figure(; size=(960, 600))
 
 swarm_animation = Axis(fig[1, 1]; xlabel="X", ylabel="Y", autolimitaspect=1)
+time_slider = SliderGrid(fig[2, 1:2], (label="Timestep", range=timesteps, startvalue=1))
+animation_controls = GridLayout(fig[3, 1]; default_rowgap=12, default_colgap=12)
 #TODO: use space on the left
-animation_controls = GridLayout(fig[2, 1]; default_rowgap=12, default_colgap=12)
-time_slider = SliderGrid(
-	animation_controls[1, 1:3], (label="Timestep", range=timesteps, startvalue=1)
-)
 
 # Watch for Play/Pause status
 isplaying = Observable(false)
@@ -84,6 +82,10 @@ on(play_button.clicks) do c
 		)
 		sleep(1 / animation_settings.sliders[1].value[])
 		isopen(fig.scene) || break # ensures computations stop if window is closed
+		if time_slider.sliders[1].value[] >=
+			n_timesteps[] - animation_settings.sliders[2].value[] - 1
+			isplaying[] = !isplaying[]
+		end
 	end
 end
 
@@ -95,14 +97,14 @@ collisions_axis = Axis(
 	metrics_grid[4, 1];
 	xlabel="Timestep",
 	yticklabelsvisible=false,
-    yticksvisible=false,
+	yticksvisible=false,
 	height=10,
 	ygridvisible=false,
-    xgridvisible=false,
+	xgridvisible=false,
 )
 linkxaxes!(metric_axis1, metric_axis2, metric_axis3, collisions_axis)
 
-data_controls = GridLayout(fig[2, 2]; default_rowgap=2)
+data_controls = GridLayout(fig[3, 2]; default_rowgap=2)
 buttongrid = GridLayout(data_controls[:, :]; default_rowgap=2)
 
 import_button, wall_button, collision_button, export_metrics_button =
@@ -144,8 +146,8 @@ on(collision_button.clicks) do c
 end
 
 on(export_metrics_button.clicks) do c
-    metrics_folder = pick_folder()
-    CSV.write(joinpath(metrics_folder, "metrics.csv"), DataFrame(data[].analysis))
+	metrics_folder = pick_folder()
+	CSV.write(joinpath(metrics_folder, "metrics.csv"), DataFrame(data[].analysis))
 end
 
 # menus to select which metrics to plot
@@ -304,22 +306,18 @@ end
 
 # plot collisions
 agent_collisions_plot = vlines!(
-    collisions_axis,
-    @lift findall(
-        reduce(|, $agent_collisions, dims = 1)[1,:]
-    );
-    color=Makie.wong_colors()[6],
-    linewidth=0.1,
-    depth = 2,
+	collisions_axis,
+	@lift findall(reduce(|, $agent_collisions; dims=1)[1, :]);
+	color=Makie.wong_colors()[6],
+	linewidth=0.1,
+	depth=2,
 )
 wall_collisions_plot = vlines!(
-    collisions_axis,
-    @lift findall(
-        reduce(|, $wall_collisions, dims = 1)[1,:]
-    );
-    color=Makie.wong_colors()[7],
-    linewidth=0.1,
-    depth = 1,
+	collisions_axis,
+	@lift findall(reduce(|, $wall_collisions; dims=1)[1, :]);
+	color=Makie.wong_colors()[7],
+	linewidth=0.1,
+	depth=1,
 )
 connect!(agent_collisions_plot.visible, animation_toggles[1].active)
 connect!(wall_collisions_plot.visible, animation_toggles[1].active)
