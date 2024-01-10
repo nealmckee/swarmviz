@@ -15,12 +15,12 @@ include("src/analysis.jl")
 struct SwarmData
 	tracking::Array{Float64,3} # robots x properties x timesteps
 	derived::Array{Float64,3} # robots x properties x timesteps
-	analysis::Array{Float64,2} # metrics x timesteps #TODO: switch to dict?
-	geometry::Dict{String,Any} # metrics, data
+	analysis::Dict{String,Any} # name, datamatrix
+	geometry::Dict{String,Any} # name, datavector
 end
 
 # Set up observables
-data = Observable(SwarmData(zeros(1, 5, 1), zeros(1, 5, 1), zeros(3, 1), Dict()))
+data = Observable(SwarmData(zeros(1, 5, 1), zeros(1, 5, 1), Dict(), Dict()))
 wall_data = Observable(zeros(2, 1))
 wall_collisions = Observable(falses(1, 1))
 agent_collisions = Observable(falses(1, 1))
@@ -42,6 +42,7 @@ GLMakie.activate!(; title="SwarmViz")
 fig = Figure(; size=(960, 600))
 
 swarm_animation = Axis(fig[1, 1]; xlabel="X", ylabel="Y", autolimitaspect=1)
+#TODO: use space on the left
 animation_controls = GridLayout(fig[2, 1]; default_rowgap=12, default_colgap=12)
 time_slider = SliderGrid(
 	animation_controls[1, 1:3], (label="Timestep", range=timesteps, startvalue=1)
@@ -61,7 +62,7 @@ animation_toggles = [Toggle(fig) for _ in 1:4]
 animation_controls[2:end, 3] = grid!(
 	hcat(
 		animation_toggles,
-		[Label(fig, l; halign=:left) for l in ["Collisions", "Polygon", "COM", "Diameter"]],
+		[Label(fig, l; halign=:left) for l in ["Collisions", "Polygon", "CoM", "Diameter"]],
 	);
 	default_rowgap=3,
 	default_colgap=3,
@@ -85,23 +86,13 @@ on(play_button.clicks) do c
 end
 
 metrics_grid = GridLayout(fig[1, 2])
-pol_axis = Axis(
-	metrics_grid[1, 1];
-	ylabel="Polarisation",
-	limits=(nothing, (0, 1)),
-	xticklabelsvisible=false,
-)
-ro_axis = Axis(
-	metrics_grid[2, 1];
-	ylabel="Rotational Order",
-	limits=(nothing, (0, 1)),
-	xticklabelsvisible=false,
-)
-miid_axis = Axis(metrics_grid[3, 1]; ylabel="Mean IID", xlabel="Timestep")
-linkxaxes!(pol_axis, ro_axis, miid_axis)
+metric_axis1 = Axis(metrics_grid[1, 1]; xticklabelsvisible=false)
+metric_axis2 = Axis(metrics_grid[2, 1]; xticklabelsvisible=false)
+metric_axis3 = Axis(metrics_grid[3, 1]; xlabel="Timestep")
+linkxaxes!(metric_axis1, metric_axis2, metric_axis3)
 
-data_controls = GridLayout(fig[2, 2])
-buttongrid = GridLayout(data_controls[1, 1]; default_rowgap=2)
+data_controls = GridLayout(fig[2, 2]; default_rowgap=2)
+buttongrid = GridLayout(data_controls[1:3, 2]; default_rowgap=2)
 
 import_button, wall_button, collision_button =
 	buttongrid[1:3, 1] = [
@@ -112,7 +103,7 @@ import_button, wall_button, collision_button =
 on(import_button.clicks) do c
 	tracking_path = pick_file(; filterlist="npy")
 	tracking_path != "" && (data[] = analyse_tracking(tracking_path))
-	autolimits!(miid_axis)
+	autolimits!(metric_axis3)
 	limits!(
 		swarm_animation,
 		minimum(data[].tracking[:, 2, :]) - 100,
@@ -140,6 +131,35 @@ on(collision_button.clicks) do c
 	wall_collisions[] = process_collisions(wall_collisons_path)
 	agent_collisions[] = process_collisions(agent_collisons_path)
 end
+
+# menus to select which metrics to plot
+metric_menu1 = Menu(
+	metrics_grid[1, 1, Top()];
+	options=Tuple.(collect(data[].analysis)),
+	default="Polarisation",
+	width=150,
+	height=18,
+	halign=:left,
+	prompt="Select Metric...",
+)
+metric_menu2 = Menu(
+	metrics_grid[2, 1, Top()];
+	options=Tuple.(collect(data[].analysis)),
+	default="Rotational Order",
+	width=150,
+	height=18,
+	halign=:left,
+	prompt="Select Metric...",
+)
+metric_menu3 = Menu(
+	metrics_grid[3, 1, Top()];
+	options=Tuple.(collect(data[].analysis)),
+	default="Mean IID",
+	width=150,
+	height=18,
+	halign=:left,
+	prompt="Select Metric...",
+)
 
 # Plot the wall of the enclosure
 wall_vertices = @lift Point2f.($wall_data[1, :], $wall_data[2, :])
@@ -179,9 +199,13 @@ c = @lift ( #TODO: refactor
 			) && any(
 				$wall_collisions[
 					i,
-					min(($(time_slider.sliders[1].value) - animation_settings.sliders[2].value[]),1):($(
-						time_slider.sliders[1].value
-					)),
+					max(
+						(
+							$(time_slider.sliders[1].value) -
+							animation_settings.sliders[2].value[]
+						),
+						1,
+					):($(time_slider.sliders[1].value)),
 				],
 			)
 				Makie.wong_colors()[7]
@@ -194,6 +218,7 @@ c = @lift ( #TODO: refactor
 
 # Plot the robot swarm
 robot_marker = Makie.Polygon(Point2f[(-1, -1), (0, 0), (-1, 1), (2, 0)])
+#TODO: move center to center of mass
 scatter!(swarm_animation, x, y; marker=robot_marker, markersize=6, rotations=r, color=c)
 
 # plot the surrounding polygon and connect to toggle
@@ -213,7 +238,7 @@ center_of_mass = scatter!( #TODO: plot styling (feedback?)
 	@lift Point2f($data.geometry["Center of Mass"][$(time_slider.sliders[1].value)]);
 	color=Makie.wong_colors()[5],
 	markersize=10,
-	marker=:cross,
+	marker=:xcross,
 )
 connect!(center_of_mass.visible, animation_toggles[3].active)
 
@@ -230,22 +255,34 @@ diameter = lines!( #TODO: plot styling (feedback?)
 )
 connect!(diameter.visible, animation_toggles[4].active)
 
-# Plot the metrics #TODO: for loop
-lines!(
-	pol_axis, @lift float.($data.analysis[1, :]); linewidth=1, color=Makie.wong_colors()[1]
+metric_menu1.options[][metric_menu1.i_selected[]][1]
+for (i, (menu, axis)) in enumerate(
+	zip(
+		[metric_menu1, metric_menu2, metric_menu3],
+		[metric_axis1, metric_axis2, metric_axis3],
+	),
 )
-vlines!(pol_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
-lines!(
-	ro_axis, @lift float.($data.analysis[2, :]); linewidth=1, color=Makie.wong_colors()[2]
-)
-vlines!(ro_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
-lines!(
-	miid_axis, @lift float.($data.analysis[3, :]); linewidth=1, color=Makie.wong_colors()[3]
-)
-vlines!(miid_axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
+	on(menu.selection) do s
+		while length(axis.scene.plots) > 1
+			delete!(
+				axis,
+				axis.scene.plots[typeof.(axis.scene.plots) .!= Plot{
+					Makie.vlines,Tuple{Int64}
+				}][1],
+			)
+		end
+		lines!(axis, s; linewidth=1, color=Makie.wong_colors()[i])
+		limits!(axis, (nothing, nothing), maximum(s) <= 1 ? (0, 1) : (nothing, nothing))
+	end
+	notify(menu.selection)
+end
+
+# plot timestep markers
+for axis in [metric_axis1, metric_axis2, metric_axis3]
+    vlines!(axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
+end
 
 colsize!(fig.layout, 1, Relative(0.5))
-colsize!(fig.layout, 2, Relative(0.5))
 
 # Display the figure in it’s own window
 fig

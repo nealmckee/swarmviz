@@ -88,7 +88,7 @@ function analyse_tracking(filename)
 		argmax(pairwise(Euclidean(), hcat(surrounding_polygon[t]...)'; dims=1)) for
 		t in 1:n_timesteps
 	]
-	radius = [
+	diameter = [
 		Euclidean()(surrounding_polygon[t][[Tuple(furthest[t])...]]...) for
 		t in 1:n_timesteps
 	]
@@ -113,16 +113,13 @@ function analyse_tracking(filename)
 		)^2 for t in 1:n_timesteps
 	]
 
-	metrics = transpose(
-		cat(
-			polarisation,
-			rotational_order,
-			mean_interindividual_distance,
-			radius,
-			area,
-			roundness;
-			dims=2,
-		),
+	metrics = Dict(
+		"Polarisation" => polarisation,
+		"Rotational Order" => rotational_order,
+		"Mean IID" => mean_interindividual_distance,
+		"Diameter" => diameter,
+		"Area" => area,
+		"Roundness" => roundness,
 	)
 	geometry = Dict(
 		"Surrounding Polygon" => surrounding_polygon,
