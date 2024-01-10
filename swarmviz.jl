@@ -61,7 +61,7 @@ animation_toggles = [Toggle(fig) for _ in 1:4]
 animation_controls[2:end, 3] = grid!(
 	hcat(
 		animation_toggles,
-		[Label(fig, l; halign=:left) for l in ["Collisions", "Polygon", "COM", "Radius"]],
+		[Label(fig, l; halign=:left) for l in ["Collisions", "Polygon", "COM", "Diameter"]],
 	);
 	default_rowgap=3,
 	default_colgap=3,
@@ -179,7 +179,7 @@ c = @lift ( #TODO: refactor
 			) && any(
 				$wall_collisions[
 					i,
-					($(time_slider.sliders[1].value) - animation_settings.sliders[2].value[]):($(
+					min(($(time_slider.sliders[1].value) - animation_settings.sliders[2].value[]),1):($(
 						time_slider.sliders[1].value
 					)),
 				],
@@ -195,6 +195,40 @@ c = @lift ( #TODO: refactor
 # Plot the robot swarm
 robot_marker = Makie.Polygon(Point2f[(-1, -1), (0, 0), (-1, 1), (2, 0)])
 scatter!(swarm_animation, x, y; marker=robot_marker, markersize=6, rotations=r, color=c)
+
+# plot the surrounding polygon and connect to toggle
+surrounding_polygon = poly!( #TODO: plot styling (feedback?)
+	swarm_animation,
+	@lift Point2f.($data.geometry["Surrounding Polygon"][$(time_slider.sliders[1].value)]);
+	color=:transparent,
+	strokecolor=Makie.wong_colors()[4],
+	strokewidth=1,
+	closed=true,
+)
+connect!(surrounding_polygon.visible, animation_toggles[2].active)
+
+# plot the center of mass and connect to toggle
+center_of_mass = scatter!( #TODO: plot styling (feedback?)
+	swarm_animation,
+	@lift Point2f($data.geometry["Center of Mass"][$(time_slider.sliders[1].value)]);
+	color=Makie.wong_colors()[5],
+	markersize=10,
+	marker=:cross,
+)
+connect!(center_of_mass.visible, animation_toggles[3].active)
+
+#plot the diameter and connect to toggle
+diameter = lines!( #TODO: plot styling (feedback?)
+	swarm_animation,
+	@lift Point2f.(
+		$data.geometry["Surrounding Polygon"][$(time_slider.sliders[1].value)][[
+			Tuple($data.geometry["Furthest Robots"][$(time_slider.sliders[1].value)])...
+		]]
+	);
+	color=Makie.wong_colors()[6],
+	linewidth=1,
+)
+connect!(diameter.visible, animation_toggles[4].active)
 
 # Plot the metrics #TODO: for loop
 lines!(
