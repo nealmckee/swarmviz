@@ -155,6 +155,8 @@ poly!(
 
 # Make coordinates and rotation responsive to the time slider
 x, y, r = [@lift $data.tracking[:, i, $(time_slider.sliders[1].value)] for i in [2, 4, 5]]
+
+# make color of robots dependend on collisions
 c = @lift ( #TODO: refactor
 	if size($agent_collisions, 1) != size($data.tracking, 1) ||
 		size($wall_collisions, 1) != size($data.tracking, 1) ||

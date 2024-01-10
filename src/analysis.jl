@@ -120,7 +120,7 @@ function analyse_tracking(filename)
 			mean_interindividual_distance,
 			radius,
 			area,
-            roundness;
+			roundness;
 			dims=2,
 		),
 	)
