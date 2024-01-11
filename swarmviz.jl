@@ -105,7 +105,7 @@ on(play_button.clicks) do c
 			time_slider.sliders[1],
 			time_slider.sliders[1].value[] + 1 + animation_settings.sliders[2].value[],
 		)
-		sleep(max(1 / animation_settings.sliders[1].value[] - time() + frame_start, 0)) #TODO: subtract time taken for update
+		sleep(max(1 / animation_settings.sliders[1].value[] - time() + frame_start, 0))
 		isopen(fig.scene) || break # ensures computations stop if window is closed
 		if time_slider.sliders[1].value[] >=
 			n_timesteps[] - animation_settings.sliders[2].value[] - 1
