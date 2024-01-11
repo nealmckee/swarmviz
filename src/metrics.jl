@@ -1,15 +1,9 @@
-function swarm_polarisation(tracking_datapoint; cluster_members=[])
-    if !isempty(cluster_members)
-        tracking_datapoint = tracking_datapoint[cluster_members, :]
-    end
+function swarm_polarisation(tracking_datapoint)
     return norm(sum(tracking_datapoint[:, 6:7]; dims=1)) / size(tracking_datapoint, 1)
 end
 
 # Calculate the rotational order of the swarm for the data of one timestep
-function swarm_rotational_order(tracking_datapoint; cluster_members=[])
-    if !isempty(cluster_members)
-        tracking_datapoint = tracking_datapoint[cluster_members, :]
-    end
+function swarm_rotational_order(tracking_datapoint)
     clustersize = size(tracking_datapoint, 1)
     barycenter = sum(tracking_datapoint[:, [2, 4]]; dims=1) ./ clustersize
     radial_unit_vectors = mapslices(
@@ -24,16 +18,10 @@ function swarm_rotational_order(tracking_datapoint; cluster_members=[])
     ) / clustersize
 end
 
-function swarm_mean_interindividual_distance(tracking_datapoint, cluster_members=[])
-    if !isempty(cluster_members)
-        tracking_datapoint = tracking_datapoint[cluster_members, :]
-    end
+function swarm_mean_interindividual_distance(tracking_datapoint)
     return mean(pairwise(Euclidean(), tracking_datapoint[:, [2, 4]]; dims=1))
 end
 
-function swarm_max_interindividual_distance(tracking_datapoint, cluster_members=[])
-    if !isempty(cluster_members)
-        tracking_datapoint = tracking_datapoint[cluster_members, :]
-    end
+function swarm_max_interindividual_distance(tracking_datapoint)
     return maximum(pairwise(Euclidean(), tracking_datapoint[:, [2, 4]]; dims=1))
 end
