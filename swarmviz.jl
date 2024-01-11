@@ -10,23 +10,38 @@ using NativeFileDialog
 using NPZ
 using Statistics
 
+const X = 2
+const Y = 4
+const θ = 5
+const T = 3
+const TRACKING_DIM = 5
+
 include("src/metrics.jl")
 include("src/plotstyle.jl")
 include("src/analysis.jl")
 
+"""
+Struct that holds all the data input as well as everything we calculate.
+"""
 struct SwarmData
-	tracking::Array{Float64,3} # robots x properties x timesteps
-	derived::Array{Float64,3} # robots x properties x timesteps
-	analysis::Dict{String,Any} # name, datamatrix
-	geometry::Dict{String,Any} # name, datavector
+	"robots x properties x timesteps"
+	tracking::Array{Float64,3}
+	"robots x properties x timesteps"
+	derived::Array{Float64,3}
+	"metric name => datamatrix"
+	analysis::Dict{String,Any}
+	"name => datavector"
+	geometry::Dict{String,Any}
 end
 
-# Set up observables
-data = Observable(SwarmData(zeros(1, 5, 1), zeros(1, 5, 1), Dict(), Dict()))
+# Set up observables #TODO: explain observables?
+data = Observable(
+	SwarmData(zeros(1, TRACKING_DIM, 1), zeros(1, TRACKING_DIM, 1), Dict(), Dict())
+) #TODO: check empty dicts without dummy data
 wall_data = Observable(zeros(2, 1))
 wall_collisions = Observable(falses(1, 1))
 agent_collisions = Observable(falses(1, 1))
-n_timesteps = @lift size($data.tracking, 3)
+n_timesteps = @lift size($data.tracking, T)
 timesteps = @lift 1:($n_timesteps)
 
 # Preload data for easier debugging #TODO: remove when done
@@ -46,6 +61,7 @@ fig = Figure(; size=(960, 600))
 swarm_animation = Axis(fig[1, 1]; xlabel="X", ylabel="Y", autolimitaspect=1)
 time_slider = SliderGrid(fig[2, 1:2], (label="Timestep", range=timesteps, startvalue=1))
 animation_controls = GridLayout(fig[3, 1]; default_rowgap=12, default_colgap=12)
+metrics_grid = GridLayout(fig[1, 2])
 #TODO: use space on the left
 
 # Watch for Play/Pause status
@@ -80,7 +96,7 @@ on(play_button.clicks) do c
 			time_slider.sliders[1],
 			time_slider.sliders[1].value[] + 1 + animation_settings.sliders[2].value[],
 		)
-		sleep(1 / animation_settings.sliders[1].value[])
+		sleep(1 / animation_settings.sliders[1].value[]) #TODO: subtract time taken for update
 		isopen(fig.scene) || break # ensures computations stop if window is closed
 		if time_slider.sliders[1].value[] >=
 			n_timesteps[] - animation_settings.sliders[2].value[] - 1
@@ -89,10 +105,7 @@ on(play_button.clicks) do c
 	end
 end
 
-metrics_grid = GridLayout(fig[1, 2])
-metric_axis1 = Axis(metrics_grid[1, 1]; xticklabelsvisible=false)
-metric_axis2 = Axis(metrics_grid[2, 1]; xticklabelsvisible=false)
-metric_axis3 = Axis(metrics_grid[3, 1]; xticklabelsvisible=false)
+metric_axes = [Axis(metrics_grid[row, 1]; xticklabelsvisible=false) for row in 1:3]
 collisions_axis = Axis(
 	metrics_grid[4, 1];
 	xlabel="Timestep",
@@ -102,7 +115,7 @@ collisions_axis = Axis(
 	ygridvisible=false,
 	xgridvisible=false,
 )
-linkxaxes!(metric_axis1, metric_axis2, metric_axis3, collisions_axis)
+linkxaxes!(metric_axes..., collisions_axis)
 
 data_controls = GridLayout(fig[3, 2]; default_rowgap=2)
 buttongrid = GridLayout(data_controls[:, :]; default_rowgap=2)
@@ -116,7 +129,7 @@ import_button, wall_button, collision_button, export_metrics_button =
 on(import_button.clicks) do c
 	tracking_path = pick_file(; filterlist="npy")
 	tracking_path != "" && (data[] = analyse_tracking(tracking_path))
-	autolimits!(metric_axis3)
+	autolimits!(metric_axes[1])
 	limits!(
 		swarm_animation,
 		minimum(data[].tracking[:, 2, :]) - 100,
@@ -151,33 +164,17 @@ on(export_metrics_button.clicks) do c
 end
 
 # menus to select which metrics to plot
-metric_menu1 = Menu(
-	metrics_grid[1, 1, Top()];
-	options=Tuple.(collect(data[].analysis)),
-	default="Polarisation",
-	width=150,
-	height=18,
-	halign=:center,
-	prompt="Select Metric...",
-)
-metric_menu2 = Menu(
-	metrics_grid[2, 1, Top()];
-	options=Tuple.(collect(data[].analysis)),
-	default="Rotational Order",
-	width=150,
-	height=18,
-	halign=:center,
-	prompt="Select Metric...",
-)
-metric_menu3 = Menu(
-	metrics_grid[3, 1, Top()];
-	options=Tuple.(collect(data[].analysis)),
-	default="Mean IID",
-	width=150,
-	height=18,
-	halign=:center,
-	prompt="Select Metric...",
-)
+metric_menus = [
+	Menu(
+		metrics_grid[i, 1, Top()];
+		options=Tuple.(collect(data[].analysis)),
+		default=default,
+		width=150,
+		height=18,
+		halign=:center,
+		prompt="Select Metric...",
+	) for (i, default) in enumerate(["Polarisation", "Rotational Order", "Mean IID"])
+]
 
 # Plot the wall of the enclosure
 wall_vertices = @lift Point2f.($wall_data[1, :], $wall_data[2, :])
@@ -277,12 +274,7 @@ diameter = lines!( #TODO: plot styling (feedback?)
 connect!(diameter.visible, animation_toggles[4].active)
 
 # plot the metrics when one is chosen from the corresponding menu
-for (i, (menu, axis)) in enumerate(
-	zip(
-		[metric_menu1, metric_menu2, metric_menu3],
-		[metric_axis1, metric_axis2, metric_axis3],
-	),
-)
+for (i, (menu, axis)) in enumerate(zip(metric_menus, metric_axes))
 	on(menu.selection) do s
 		while length(axis.scene.plots) > 1
 			delete!(
@@ -299,7 +291,7 @@ for (i, (menu, axis)) in enumerate(
 end
 
 # plot timestep markers
-for axis in [metric_axis1, metric_axis2, metric_axis3]
+for axis in metric_axes
 	vlines!(axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
 end
 #TODO: add rectangle in collisions plot?

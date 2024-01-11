@@ -3,22 +3,22 @@ import LazySets: convex_hull
 function analyse_tracking(filename)
 	# Load the data and drop singular dimensions
 	tracking_data = npzread(filename)[1, :, 1:5, :]
-
+	#TODO: warn when contains NaNs?
 	# Get the number of robots and the number of timesteps
 	n_robots = size(tracking_data, 1)
 	n_timesteps = size(tracking_data, 3)
 
 	# Add heading vector from orientation to data
-	heading_vector_xs = reshape(cos.(tracking_data[:, 5, :]), n_robots, 1, n_timesteps)
-	heading_vector_ys = reshape(sin.(tracking_data[:, 5, :]), n_robots, 1, n_timesteps)
+	heading_vector_xs = reshape(cos.(tracking_data[:, θ, :]), n_robots, 1, n_timesteps)
+	heading_vector_ys = reshape(sin.(tracking_data[:, θ, :]), n_robots, 1, n_timesteps)
 	velocity_xs = reshape(
-		cat(zeros(n_robots), diff(tracking_data[:, 2, :]; dims=2); dims=2),
+		cat(zeros(n_robots), diff(tracking_data[:, X, :]; dims=2); dims=2),
 		n_robots,
 		1,
 		n_timesteps,
 	)
 	velocity_ys = reshape(
-		cat(zeros(n_robots), diff(tracking_data[:, 2, :]; dims=2); dims=2),
+		cat(zeros(n_robots), diff(tracking_data[:, Y, :]; dims=2); dims=2),
 		n_robots,
 		1,
 		n_timesteps,
@@ -27,22 +27,22 @@ function analyse_tracking(filename)
 		sqrt.(velocity_xs .^ 2 .+ velocity_ys .^ 2), n_robots, 1, n_timesteps
 	)
 	acceleration_xs = reshape(
-		cat(diff(velocity_xs; dims=3), zeros(n_robots); dims=3), n_robots, 1, n_timesteps
+		cat(diff(velocity_xs; dims=T), zeros(n_robots); dims=T), n_robots, 1, n_timesteps
 	)
 	acceleration_ys = reshape(
-		cat(diff(velocity_ys; dims=3), zeros(n_robots); dims=3), n_robots, 1, n_timesteps
+		cat(diff(velocity_ys; dims=T), zeros(n_robots); dims=T), n_robots, 1, n_timesteps
 	)
 	acceleration_magnitude = reshape(
 		sqrt.(acceleration_xs .^ 2 .+ acceleration_ys .^ 2), n_robots, 1, n_timesteps
 	)
 	angular_velocity = reshape(
-		cat(zeros(n_robots), diff(tracking_data[:, 5, :]; dims=2); dims=2),
+		cat(zeros(n_robots), diff(tracking_data[:, θ, :]; dims=2); dims=2),
 		n_robots,
 		1,
 		n_timesteps,
 	)
 	angular_acceleration = reshape(
-		cat(diff(angular_velocity; dims=3), zeros(n_robots); dims=3),
+		cat(diff(angular_velocity; dims=T), zeros(n_robots); dims=T),
 		n_robots,
 		1,
 		n_timesteps,
@@ -77,11 +77,11 @@ function analyse_tracking(filename)
 
 	surrounding_polygon =
 		convex_hull.([
-			[[tracking_data[r, 2, t], tracking_data[r, 4, t]] for r in 1:n_robots] for
+			[[tracking_data[r, X, t], tracking_data[r, Y, t]] for r in 1:n_robots] for
 			t in 1:n_timesteps
 		])
 	center_of_mass = [
-		[sum(tracking_data[:, 2, t]), sum(tracking_data[:, 4, t])] / n_robots for
+		[sum(tracking_data[:, X, t]), sum(tracking_data[:, Y, t])] / n_robots for
 		t in 1:n_timesteps
 	]
 	furthest = [
@@ -128,12 +128,15 @@ function analyse_tracking(filename)
 	)
 
 	return SwarmData(
-		tracking_data[:, 1:5, :], tracking_data[:, 5:end, :], metrics, geometry
+		tracking_data[:, 1:TRACKING_DIM, :],
+		tracking_data[:, TRACKING_DIM:end, :],
+		metrics,
+		geometry,
 	)
 end
 
 function analyse_wall(filename)
-	wd = npzread(filename)[1, 1, [2, 4], :]
+	wd = npzread(filename)[1, 1, [X, Y], :]
 	# Remove columns with NaN values from wall_data
 	wd = wd[:, .!isnan.(wd[1, :])]
 	wd = wd[:, .!isnan.(wd[2, :])]
