@@ -183,19 +183,6 @@ metric_menus = [
 	) for (i, default) in enumerate(["Polarisation", "Rotational Order", "Mean IID"])
 ]
 
-# Plot the wall of the enclosure
-wall_vertices = @lift Point2f.($wall_data[1, :], $wall_data[2, :])
-poly!(
-	swarm_animation,
-	wall_vertices;
-	color=:transparent,
-	strokecolor="#8f8f8f",
-	strokewidth=1,
-	linestyle=:dot,
-	closed=true,
-	depth=-1,
-)
-
 # Make coordinates and rotation responsive to the time slider
 x, y, r = [@lift $data.tracking[:, i, $(time_slider.sliders[1].value)] for i in [2, 4, 5]]
 
@@ -244,6 +231,19 @@ c = @lift ( #TODO: refactor
 robot_marker = Makie.Polygon(Point2f[(-1, -1), (0, 0), (-1, 1), (2, 0)])
 #TODO: switch collisions to glow instead of color?
 scatter!(swarm_animation, x, y; marker=robot_marker, markersize=6, rotations=r, color=c)
+
+# Plot the wall of the enclosure
+wall_vertices = @lift Point2f.($wall_data[1, :], $wall_data[2, :])
+poly!(
+	swarm_animation,
+	wall_vertices;
+	color=:transparent,
+	strokecolor="#8f8f8f",
+	strokewidth=1,
+	linestyle=:dot,
+	closed=true,
+	depth=-1,
+)
 
 # plot the surrounding polygon and connect to toggle
 surrounding_polygon = poly!(
