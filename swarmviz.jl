@@ -44,7 +44,7 @@ agent_collisions = Observable(falses(1, 1))
 n_timesteps = @lift size($data.tracking, T)
 timesteps = @lift 1:($n_timesteps)
 isplaying = Observable(false)
-
+time()
 # Preload data for easier debugging #TODO: remove when done
 tracking_path = "data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_summaryd.npy"
 wall_path = "data/A0_09_B0_0/w3_summaryd.npy"
@@ -97,14 +97,15 @@ on(play_button.clicks) do c
 	isplaying[] = !isplaying[]
 end
 on(play_button.clicks) do c
-	@async while isplaying[] && #TODO: check whether @async is safe/necessary
+	@async while isplaying[] &&
 				 time_slider.sliders[1].value[] <
 				 n_timesteps[] - animation_settings.sliders[2].value[] - 1
+        frame_start = time()
 		set_close_to!(
 			time_slider.sliders[1],
 			time_slider.sliders[1].value[] + 1 + animation_settings.sliders[2].value[],
 		)
-		sleep(1 / animation_settings.sliders[1].value[]) #TODO: subtract time taken for update
+		sleep(max(1 / animation_settings.sliders[1].value[] - time() + frame_start, 0)) #TODO: subtract time taken for update
 		isopen(fig.scene) || break # ensures computations stop if window is closed
 		if time_slider.sliders[1].value[] >=
 			n_timesteps[] - animation_settings.sliders[2].value[] - 1
