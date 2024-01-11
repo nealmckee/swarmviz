@@ -28,13 +28,13 @@ struct SwarmData
 	tracking::Array{Float64,3}
 	"robots x properties x timesteps"
 	derived::Array{Float64,3}
-	"metric name => datamatrix"
+	"metric name => datavector"
 	analysis::Dict{String,Any}
 	"name => datavector"
 	geometry::Dict{String,Any}
 end
 
-# Set up observables #TODO: explain observables?
+# Set up observables
 data = Observable(
 	SwarmData(zeros(1, TRACKING_DIM, 1), zeros(1, TRACKING_DIM, 1), Dict(), Dict())
 ) #TODO: check empty dicts without dummy data
@@ -43,6 +43,7 @@ wall_collisions = Observable(falses(1, 1))
 agent_collisions = Observable(falses(1, 1))
 n_timesteps = @lift size($data.tracking, T)
 timesteps = @lift 1:($n_timesteps)
+isplaying = Observable(false)
 
 # Preload data for easier debugging #TODO: remove when done
 tracking_path = "data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_summaryd.npy"
@@ -59,13 +60,19 @@ GLMakie.activate!(; title="SwarmViz")
 fig = Figure(; size=(960, 600))
 
 swarm_animation = Axis(fig[1, 1]; xlabel="X", ylabel="Y", autolimitaspect=1)
+
+#TODO: use space on the left
 time_slider = SliderGrid(fig[2, 1:2], (label="Timestep", range=timesteps, startvalue=1))
 animation_controls = GridLayout(fig[3, 1]; default_rowgap=12, default_colgap=12)
-metrics_grid = GridLayout(fig[1, 2])
-#TODO: use space on the left
 
-# Watch for Play/Pause status
-isplaying = Observable(false)
+metrics_grid = GridLayout(fig[1, 2])
+data_controls = GridLayout(fig[3, 2]; default_rowgap=2)
+
+#adjust the width of the column with the swarm animation
+colsize!(fig.layout, 1, Relative(0.5))
+colsize!(fig.layout, 2, Relative(0.5))
+
+# create play/pause button with reactive label
 play_button_text = @lift $isplaying[] ? "Pause" : "Play"
 play_button = Button(animation_controls[2, 1]; label=play_button_text, width=60)
 
@@ -84,7 +91,8 @@ animation_controls[2:end, 3] = grid!(
 	default_colgap=3,
 )
 
-# Watch for changes in the time slider to update the plot
+# start animation loop on buttonpress, the plot then automatically updates
+# as it’s dependent on the time slider
 on(play_button.clicks) do c
 	isplaying[] = !isplaying[]
 end
@@ -105,23 +113,9 @@ on(play_button.clicks) do c
 	end
 end
 
-metric_axes = [Axis(metrics_grid[row, 1]; xticklabelsvisible=false) for row in 1:3]
-collisions_axis = Axis(
-	metrics_grid[4, 1];
-	xlabel="Timestep",
-	yticklabelsvisible=false,
-	yticksvisible=false,
-	height=10,
-	ygridvisible=false,
-	xgridvisible=false,
-)
-linkxaxes!(metric_axes..., collisions_axis)
-
-data_controls = GridLayout(fig[3, 2]; default_rowgap=2)
-buttongrid = GridLayout(data_controls[:, :]; default_rowgap=2)
-
+# create buttons to import/export data
 import_button, wall_button, collision_button, export_metrics_button =
-	buttongrid[1:2, 1:2] = [
+	data_controls[1:2, 1:2] = [
 		Button(fig; label=l, halign=:left) for
 		l in ["Import Tracking", "Import Wall", "Import Collisions", "Export Metrics"]
 	]
@@ -163,7 +157,20 @@ on(export_metrics_button.clicks) do c
 	CSV.write(joinpath(metrics_folder, "metrics.csv"), DataFrame(data[].analysis))
 end
 
-# menus to select which metrics to plot
+# axes to hold the metric plots
+metric_axes = [Axis(metrics_grid[row, 1]; xticklabelsvisible=false) for row in 1:3]
+collisions_axis = Axis(
+	metrics_grid[4, 1];
+	xlabel="Timestep",
+	yticklabelsvisible=false,
+	yticksvisible=false,
+	height=10,
+	ygridvisible=false,
+	xgridvisible=false,
+)
+linkxaxes!(metric_axes..., collisions_axis)
+
+# menus to select which metrics to plot (inside the metric axes)
 metric_menus = [
 	Menu(
 		metrics_grid[i, 1, Top()];
@@ -233,8 +240,8 @@ c = @lift ( #TODO: refactor
 )
 
 # Plot the robot swarm
-robot_marker = Makie.Polygon(Point2f[(-1, -1), (0, 0), (-1, 1), (2, 0)])
 #TODO: move center to center of mass
+robot_marker = Makie.Polygon(Point2f[(-1, -1), (0, 0), (-1, 1), (2, 0)])
 #TODO: switch collisions to glow instead of color?
 scatter!(swarm_animation, x, y; marker=robot_marker, markersize=6, rotations=r, color=c)
 
@@ -287,7 +294,26 @@ for (i, (menu, axis)) in enumerate(zip(metric_menus, metric_axes))
 		lines!(axis, s; linewidth=1, color=Makie.wong_colors()[i])
 		limits!(axis, (nothing, nothing), maximum(s) <= 1 ? (0, 1) : (nothing, nothing))
 	end
-	notify(menu.selection)
+	notify(menu.selection) #TODO remove?
+end
+
+# plot collisions
+collision_plots = [
+	vlines!(
+		collisions_axis,
+		@lift findall(reduce(|, $obs; dims=1)[1, :]);
+		color=color,
+		linewidth=0.1,
+		depth=depth,
+	) for (depth, (obs, color)) in enumerate(
+		zip(
+			[wall_collisions, agent_collisions],
+			[Makie.wong_colors()[7], Makie.wong_colors()[6]],
+		),
+	)
+]
+for p in collision_plots
+    connect!(p.visible, animation_toggles[1].active)
 end
 
 # plot timestep markers
@@ -295,28 +321,6 @@ for axis in metric_axes
 	vlines!(axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
 end
 #TODO: add rectangle in collisions plot?
-
-# plot collisions
-agent_collisions_plot = vlines!(
-	collisions_axis,
-	@lift findall(reduce(|, $agent_collisions; dims=1)[1, :]);
-	color=Makie.wong_colors()[6],
-	linewidth=0.1,
-	depth=2,
-)
-wall_collisions_plot = vlines!(
-	collisions_axis,
-	@lift findall(reduce(|, $wall_collisions; dims=1)[1, :]);
-	color=Makie.wong_colors()[7],
-	linewidth=0.1,
-	depth=1,
-)
-connect!(agent_collisions_plot.visible, animation_toggles[1].active)
-connect!(wall_collisions_plot.visible, animation_toggles[1].active)
-
-#adjust the width of the column with the swarm animation
-colsize!(fig.layout, 1, Relative(0.5))
-colsize!(fig.layout, 2, Relative(0.5))
 
 # Display the figure in it’s own window
 fig
