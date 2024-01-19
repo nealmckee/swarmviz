@@ -77,14 +77,14 @@ function analyse_tracking(filename)
 	)
 
 	# precalculate all metrics for all timesteps (currently no clustering)
-	polarisation = dropdims(
-		mapslices(swarm_polarisation, tracking_data; dims=(ROBOTS, PROPERTIES));
-		dims=(ROBOTS, PROPERTIES),
-	)
-	rotational_order = dropdims(
-		mapslices(swarm_rotational_order, tracking_data; dims=(ROBOTS, PROPERTIES));
-		dims=(ROBOTS, PROPERTIES),
-	)
+	polarisation = [swarm_polarisation(tracking_data[:,:,t]) for t in 1:n_timesteps]
+	rotational_order = [swarm_rotational_order(tracking_data[:,:,t]) for t in 1:n_timesteps]
+
+    distmats = mapslices(
+        x -> pairwise(Euclidean(), x),
+        tracking_data[:, [X, Y], :]; dims=(ROBOTS, PROPERTIES),
+    )
+    println(typeof(distmats))
 	mean_interindividual_distance = dropdims(
 		mapslices(
 			swarm_mean_interindividual_distance, tracking_data; dims=(ROBOTS, PROPERTIES)
@@ -102,7 +102,7 @@ function analyse_tracking(filename)
 		t in 1:n_timesteps
 	]
 	furthest = [
-		argmax(pairwise(Euclidean(), hcat(surrounding_polygon[t]...)'; dims=1)) for
+		argmax(pairwise(Euclidean(), stack(surrounding_polygon[t], dims=1); dims=1)) for
 		t in 1:n_timesteps
 	]
 	diameter = [
@@ -124,8 +124,8 @@ function analyse_tracking(filename)
 		sum( # perimeter
 			colwise(
 				Euclidean(),
-				hcat(surrounding_polygon[t]...),
-				hcat(surrounding_polygon[t][2:end]..., surrounding_polygon[t][1]),
+				stack(surrounding_polygon[t]),
+				stack(vcat(surrounding_polygon[t][2:end], [surrounding_polygon[t][1]])),
 			),
 		)^2 for t in 1:n_timesteps
 	]
