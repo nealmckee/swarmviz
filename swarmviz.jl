@@ -189,7 +189,7 @@ metric_menus = [
 		prompt="Select Metric...",
 	) for (i, default) in enumerate(["Polarisation", "Rotational Order", "Diameter"]) #TODO remove defaults after debugging
 ]
-data[].analysis# Make coordinates and rotation responsive to the time slider
+# Make coordinates and rotation responsive to the time slider
 x, y, r = [@lift $data.tracking[:, i, $(time_slider.sliders[1].value)] for i in [2, 4, 5]]
 
 # make color of robots dependend on collisions
