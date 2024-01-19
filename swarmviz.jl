@@ -321,7 +321,7 @@ collision_plots = [
 		collisions_axis,
 		@lift findall(reduce(|, $obs; dims=1)[1, :]);
 		color=color,
-		linewidth=0.1,
+		linewidth=1,
 		depth=depth,
 	) for (depth, (obs, color)) in enumerate(
 		zip(
