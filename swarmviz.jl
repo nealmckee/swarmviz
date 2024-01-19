@@ -1,4 +1,5 @@
 import AlgebraOfGraphics: set_aog_theme!
+# using Clustering
 using Colors
 using CSV
 using DataFrames
@@ -29,7 +30,7 @@ struct SwarmData
 	"robots x properties x timesteps"
 	derived::Array{Float64,3}
 	"metric name => datavector"
-	analysis::Dict{String,Any}
+	analysis::Dict{String,Vector{Real}}
 	"name => datavector"
 	geometry::Dict{String,Any}
 end
@@ -100,7 +101,7 @@ on(play_button.clicks) do c
 	@async while isplaying[] &&
 				 time_slider.sliders[1].value[] <
 				 n_timesteps[] - animation_settings.sliders[2].value[] - 1
-        frame_start = time()
+		frame_start = time()
 		set_close_to!(
 			time_slider.sliders[1],
 			time_slider.sliders[1].value[] + 1 + animation_settings.sliders[2].value[],
@@ -151,11 +152,12 @@ on(collision_button.clicks) do c
 	)[1]
 	wall_collisions[] = process_collisions(wall_collisons_path)
 	agent_collisions[] = process_collisions(agent_collisons_path)
+    autolimits!(collisions_axis)
 end
 
 on(export_metrics_button.clicks) do c
-	metrics_folder = pick_folder()
-	CSV.write(joinpath(metrics_folder, "metrics.csv"), DataFrame(data[].analysis))
+	export_folder = pick_folder()
+	CSV.write(joinpath(export_folder, "metrics.csv"), DataFrame(data[].analysis))
 end
 
 # axes to hold the metric plots
@@ -172,36 +174,40 @@ collisions_axis = Axis(
 linkxaxes!(metric_axes..., collisions_axis)
 
 # menus to select which metrics to plot (inside the metric axes)
+metrics_tuples = @lift Tuple.(collect($data.analysis))
 metric_menus = [
 	Menu(
 		metrics_grid[i, 1, Top()];
-		options=Tuple.(collect(data[].analysis)),
+		options=metrics_tuples,
 		default=default,
 		width=150,
 		height=18,
 		halign=:center,
 		prompt="Select Metric...",
-	) for (i, default) in enumerate(["Polarisation", "Rotational Order", "Mean IID"])
+	) for (i, default) in enumerate(["Polarisation", "Rotational Order", "Diameter"]) #TODO remove defaults after debugging
 ]
-
-# Make coordinates and rotation responsive to the time slider
+data[].analysis# Make coordinates and rotation responsive to the time slider
 x, y, r = [@lift $data.tracking[:, i, $(time_slider.sliders[1].value)] for i in [2, 4, 5]]
 
 # make color of robots dependend on collisions
-c = @lift ( #TODO: refactor
+g = @lift ( #TODO: refactor
 	if size($agent_collisions, 1) != size($data.tracking, 1) ||
 		size($wall_collisions, 1) != size($data.tracking, 1) ||
 		!$(animation_toggles[1].active)
-		repeat([RGBA(0, 0, 0)], size($data.tracking, 1))
+		repeat([RGBA(0, 0, 0, 0)], size($data.tracking, 1))
 	else
 		[
 			if checkbounds(Bool, $agent_collisions, 1, $(time_slider.sliders[1].value)) &&
 				any(
 				$agent_collisions[
 					i,
-					($(time_slider.sliders[1].value) - animation_settings.sliders[2].value[]):($(
-						time_slider.sliders[1].value
-					)),
+					max(
+						(
+							$(time_slider.sliders[1].value) -
+							animation_settings.sliders[2].value[]
+						),
+						1,
+					):($(time_slider.sliders[1].value)),
 				],
 			)
 				Makie.wong_colors()[6]
@@ -221,7 +227,7 @@ c = @lift ( #TODO: refactor
 			)
 				Makie.wong_colors()[7]
 			else
-				RGBA(0, 0, 0)
+				RGBA(0, 0, 0, 0)
 			end for i in 1:size($wall_collisions, 1)
 		]
 	end
@@ -230,8 +236,17 @@ c = @lift ( #TODO: refactor
 # Plot the robot swarm
 #TODO: move center to center of mass
 robot_marker = Makie.Polygon(Point2f[(-1, -1), (0, 0), (-1, 1), (2, 0)])
-#TODO: switch collisions to glow instead of color?
-scatter!(swarm_animation, x, y; marker=robot_marker, markersize=6, rotations=r, color=c)
+scatter!(
+	swarm_animation,
+	x,
+	y;
+	marker=robot_marker,
+	markersize=6,
+	rotations=r,
+	color=:black,
+	glowcolor=g,
+	glowwidth=6,
+)
 
 # Plot the wall of the enclosure
 wall_vertices = @lift Point2f.($wall_data[1, :], $wall_data[2, :])
@@ -259,7 +274,7 @@ surrounding_polygon = poly!(
 connect!(surrounding_polygon.visible, animation_toggles[2].active)
 
 # plot the center of mass and connect to toggle
-center_of_mass = scatter!( #TODO: plot styling (feedback?)
+center_of_mass = scatter!(
 	swarm_animation,
 	@lift Point2f($data.geometry["Center of Mass"][$(time_slider.sliders[1].value)]);
 	color="#8f8f8f",
@@ -269,7 +284,7 @@ center_of_mass = scatter!( #TODO: plot styling (feedback?)
 connect!(center_of_mass.visible, animation_toggles[3].active)
 
 #plot the diameter and connect to toggle
-diameter = lines!( #TODO: plot styling (feedback?)
+diameter = lines!(
 	swarm_animation,
 	@lift Point2f.(
 		$data.geometry["Surrounding Polygon"][$(time_slider.sliders[1].value)][[
@@ -292,10 +307,12 @@ for (i, (menu, axis)) in enumerate(zip(metric_menus, metric_axes))
 				}][1],
 			)
 		end
-		lines!(axis, s; linewidth=1, color=Makie.wong_colors()[i])
-		limits!(axis, (nothing, nothing), maximum(s) <= 1 ? (0, 1) : (nothing, nothing))
+		if !isnothing(s)
+			lines!(axis, s; linewidth=1, color=Makie.wong_colors()[i])
+			limits!(axis, (nothing, nothing), maximum(s) <= 1 ? (0, 1) : (nothing, nothing))
+		end
 	end
-	notify(menu.selection) #TODO remove?
+	notify(menu.selection) #TODO remove after debugging
 end
 
 # plot collisions
@@ -314,7 +331,7 @@ collision_plots = [
 	)
 ]
 for p in collision_plots
-    connect!(p.visible, animation_toggles[1].active)
+	connect!(p.visible, animation_toggles[1].active)
 end
 
 # plot timestep markers
