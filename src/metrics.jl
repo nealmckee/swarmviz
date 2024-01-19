@@ -1,5 +1,6 @@
 function swarm_polarisation(tracking_datapoint)
-	return norm(sum(tracking_datapoint[:, HVX:HVY]; dims=1)) / size(tracking_datapoint, 1)
+	return norm(sum(tracking_datapoint[:, [HVX, HVY]]; dims=1)) /
+		   size(tracking_datapoint, 1)
 end
 
 # Calculate the rotational order of the swarm for the data of one timestep
@@ -12,7 +13,8 @@ function swarm_rotational_order(tracking_datapoint)
 	return norm(
 		sum([
 			cross(
-				vcat(tracking_datapoint[i, HVX:HVY], 0), vcat(radial_unit_vectors[i, :], 0)
+				vcat(tracking_datapoint[i, [HVX, HVY]], 0),
+				vcat(radial_unit_vectors[i, :], 0),
 			) for i in 1:clustersize
 		]),
 	) / clustersize
