@@ -36,11 +36,20 @@ function analyse_tracking(filename)
 		sqrt.(acceleration_xs .^ 2 .+ acceleration_ys .^ 2), n_robots, 1, n_timesteps
 	)
 	angular_velocity = reshape(
-		cat(zeros(n_robots), diff(tracking_data[:, θ, :]; dims=2); dims=2),
+		cat(
+			zeros(n_robots),
+			[
+				abs(d) < 2pi - abs(d) ? d : -sign(d)*(2pi - abs(d)) for
+				d in diff(tracking_data[:, θ, :]; dims=2)
+			];
+			dims=2,
+		),
 		n_robots,
 		1,
 		n_timesteps,
-	)
+	) #TODO: fix wraparound
+
+	2 * pi .- angular_velocity[angular_velocity .> pi]
 	angular_acceleration = reshape(
 		cat(diff(angular_velocity; dims=T), zeros(n_robots); dims=T),
 		n_robots,
