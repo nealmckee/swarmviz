@@ -53,8 +53,8 @@ function analyse_tracking(filename)
 	mean_interindividual_distance = mean.(distmats)
 	surrounding_polygon =
 		convex_hull.(
-			[t[[X, Y]] for t in eachslice(s; dims=ROBOTS)] for #TODO cleaner version
-			s in eachslice(tracking_data; dims=T)
+			collect(eachslice(s; dims=ROBOTS)) for
+			s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
 		)
 	center_of_mass = [
 		mean(eachslice(s; dims=ROBOTS)) for
