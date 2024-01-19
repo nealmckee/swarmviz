@@ -6,59 +6,26 @@ function analyse_tracking(filename)
 	#TODO: warn when contains NaNs?
 	# Get the number of robots and the number of timesteps
 	n_robots = size(tracking_data, ROBOTS)
-	n_timesteps = size(tracking_data, T)
 
 	# Add heading vector from orientation to data
-	heading_vector_xs = reshape(cos.(tracking_data[:, θ, :]), n_robots, 1, n_timesteps)
-	heading_vector_ys = reshape(sin.(tracking_data[:, θ, :]), n_robots, 1, n_timesteps)
-	velocity_xs = reshape(
-		cat(
-			zeros(n_robots), diff(tracking_data[:, X, :]; dims=PROPERTIES); dims=PROPERTIES
-		),
-		n_robots,
-		1,
-		n_timesteps,
+	heading_vector_xs = cos.(tracking_data[:, θ:θ, :])
+	heading_vector_ys = sin.(tracking_data[:, θ:θ, :])
+	velocity_xs = cat(zeros(n_robots, 1, 1), diff(tracking_data[:, X:X, :]; dims=T); dims=T)
+	velocity_ys = cat(zeros(n_robots, 1, 1), diff(tracking_data[:, Y:Y, :]; dims=T); dims=T)
+	velocity_magnitude = sqrt.(velocity_xs .^ 2 .+ velocity_ys .^ 2)
+	acceleration_xs = cat(diff(velocity_xs; dims=T), zeros(n_robots, 1, 1); dims=T)
+	acceleration_ys = cat(diff(velocity_ys; dims=T), zeros(n_robots, 1, 1); dims=T)
+	acceleration_magnitude = sqrt.(acceleration_xs .^ 2 .+ acceleration_ys .^ 2)
+	angular_velocity = cat(
+		zeros(n_robots, 1, 1),
+		[
+			abs(d) < 2pi - abs(d) ? d : -sign(d) * (2pi - abs(d)) for
+			d in diff(tracking_data[:, θ:θ, :]; dims=T)
+		];
+		dims=T,
 	)
-	velocity_ys = reshape(
-		cat(
-			zeros(n_robots), diff(tracking_data[:, Y, :]; dims=PROPERTIES); dims=PROPERTIES
-		),
-		n_robots,
-		1,
-		n_timesteps,
-	)
-	velocity_magnitude = reshape(
-		sqrt.(velocity_xs .^ 2 .+ velocity_ys .^ 2), n_robots, 1, n_timesteps
-	)
-	acceleration_xs = reshape(
-		cat(diff(velocity_xs; dims=T), zeros(n_robots); dims=T), n_robots, 1, n_timesteps
-	)
-	acceleration_ys = reshape(
-		cat(diff(velocity_ys; dims=T), zeros(n_robots); dims=T), n_robots, 1, n_timesteps
-	)
-	acceleration_magnitude = reshape(
-		sqrt.(acceleration_xs .^ 2 .+ acceleration_ys .^ 2), n_robots, 1, n_timesteps
-	)
-	angular_velocity = reshape(
-		cat(
-			zeros(n_robots),
-			[
-				abs(d) < 2pi - abs(d) ? d : -sign(d) * (2pi - abs(d)) for
-				d in diff(tracking_data[:, θ, :]; dims=PROPERTIES)
-			];
-			dims=PROPERTIES,
-		),
-		n_robots,
-		1,
-		n_timesteps,
-	)
-
-	2 * pi .- angular_velocity[angular_velocity .> pi]
-	angular_acceleration = reshape(
-		cat(diff(angular_velocity; dims=T), zeros(n_robots); dims=T),
-		n_robots,
-		1,
-		n_timesteps,
+	angular_acceleration = cat(
+		diff(angular_velocity; dims=T), zeros(n_robots, 1, 1); dims=T
 	)
 
 	tracking_data = cat(
@@ -73,61 +40,43 @@ function analyse_tracking(filename)
 		acceleration_magnitude,
 		angular_velocity,
 		angular_acceleration;
-		dims=2,
+		dims=PROPERTIES,
 	)
 
 	# precalculate all metrics for all timesteps (currently no clustering)
-	polarisation = [swarm_polarisation(tracking_data[:,:,t]) for t in 1:n_timesteps]
-	rotational_order = [swarm_rotational_order(tracking_data[:,:,t]) for t in 1:n_timesteps]
-
-    distmats = mapslices(
-        x -> pairwise(Euclidean(), x),
-        tracking_data[:, [X, Y], :]; dims=(ROBOTS, PROPERTIES),
-    )
-    println(typeof(distmats))
-	mean_interindividual_distance = dropdims(
-		mapslices(
-			swarm_mean_interindividual_distance, tracking_data; dims=(ROBOTS, PROPERTIES)
-		);
-		dims=(ROBOTS, PROPERTIES),
-	)
-
+	polarisation = swarm_polarisation.(eachslice(tracking_data; dims=T))
+	rotational_order = swarm_rotational_order.(eachslice(tracking_data; dims=T))
+	distmats = [
+		pairwise(Euclidean(), permutedims(s)) for
+		s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
+	]
+	mean_interindividual_distance = mean.(distmats)
 	surrounding_polygon =
-		convex_hull.([
-			[[tracking_data[r, X, t], tracking_data[r, Y, t]] for r in 1:n_robots] for
-			t in 1:n_timesteps
-		])
+		convex_hull.(
+			[t[[X, Y]] for t in eachslice(s; dims=ROBOTS)] for #TODO cleaner version
+			s in eachslice(tracking_data; dims=T)
+		)
 	center_of_mass = [
-		[sum(tracking_data[:, X, t]), sum(tracking_data[:, Y, t])] / n_robots for
-		t in 1:n_timesteps
+		mean(eachslice(s; dims=ROBOTS)) for
+		s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
 	]
-	furthest = [
-		argmax(pairwise(Euclidean(), stack(surrounding_polygon[t], dims=1); dims=1)) for
-		t in 1:n_timesteps
+	findmaxdist = [findmax(m) for m in distmats]
+	diameter = [f[1] for f in findmaxdist]
+	furthest = [f[2] for f in findmaxdist]
+	maxmindist = [
+		maximum(minimum.(eachcol(m + diagm(Inf * ones(size(m, 1)))))) for m in distmats
 	]
-	diameter = [
-		Euclidean()(surrounding_polygon[t][[Tuple(furthest[t])...]]...) for
-		t in 1:n_timesteps
-	]
-	area = [ # shoelace formula for polygon area (https://en.wikipedia.org/wiki/Shoelace_formula)
-		0.5 * abs(
+	area = [ #TODO: outsource
+		0.5 * abs( # shoelace formula for area of polygon (https://en.wikipedia.org/wiki/Shoelace_formula)
 			sum(
-				surrounding_polygon[t][i][1] *
-				surrounding_polygon[t][i % length(surrounding_polygon[t]) + 1][2] -
-				surrounding_polygon[t][i % length(surrounding_polygon[t]) + 1][1] *
-				surrounding_polygon[t][i][2] for i in 1:length(surrounding_polygon[t])
+				p[i][1] * p[i % length(p) + 1][2] - p[i % length(p) + 1][1] * p[i][2] for
+				i in eachindex(p)
 			),
-		) for t in 1:n_timesteps
+		) for p in surrounding_polygon
 	]
 	roundness = [
-		4 * pi * area[t] /
-		sum( # perimeter
-			colwise(
-				Euclidean(),
-				stack(surrounding_polygon[t]),
-				stack(vcat(surrounding_polygon[t][2:end], [surrounding_polygon[t][1]])),
-			),
-		)^2 for t in 1:n_timesteps
+		4pi * A / sum(colwise(Euclidean(), stack(p), stack(vcat(p[2:end], [p[1]]))))^2 for
+		(p, A) in zip(surrounding_polygon, area)
 	]
 
 	metrics = Dict(
@@ -137,11 +86,13 @@ function analyse_tracking(filename)
 		"Diameter" => diameter,
 		"Area" => area,
 		"Roundness" => roundness,
+		"Max Min IID" => maxmindist,
 	)
-	geometry = Dict(
+	geometry = Dict( #TODO: rename
 		"Surrounding Polygon" => surrounding_polygon,
 		"Center of Mass" => center_of_mass,
 		"Furthest Robots" => furthest,
+		"Distance Matrices" => distmats,
 	)
 
 	return SwarmData(
