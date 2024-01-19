@@ -35,7 +35,7 @@ struct SwarmData
 	"metric name => datavector"
 	analysis::Dict{String,Vector{Real}}
 	"name => datavector"
-	geometry::Dict{String,Any}
+	geometry::Dict{String,Any} # TODO: rename
 end
 
 # Set up observables
@@ -155,7 +155,7 @@ on(collision_button.clicks) do c
 	)[1]
 	wall_collisions[] = process_collisions(wall_collisons_path)
 	agent_collisions[] = process_collisions(agent_collisons_path)
-    autolimits!(collisions_axis)
+	autolimits!(collisions_axis)
 end
 
 on(export_metrics_button.clicks) do c
@@ -290,9 +290,18 @@ connect!(center_of_mass.visible, animation_toggles[3].active)
 diameter = lines!(
 	swarm_animation,
 	@lift Point2f.(
-		$data.geometry["Surrounding Polygon"][$(time_slider.sliders[1].value)][[
-			Tuple($data.geometry["Furthest Robots"][$(time_slider.sliders[1].value)])...
-		]]
+		eachslice(
+			$data.tracking[
+				[
+					Tuple(
+						$data.geometry["Furthest Robots"][$(time_slider.sliders[1].value)]
+					)...,
+				],
+				[X, Y],
+				$(time_slider.sliders[1].value),
+			];
+			dims=ROBOTS,
+		)
 	);
 	color="#8f8f8f",
 	linewidth=1,
