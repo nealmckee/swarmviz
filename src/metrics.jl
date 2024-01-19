@@ -20,8 +20,10 @@ end
 
 function swarm_mean_interindividual_distance(tracking_datapoint)
     return mean(pairwise(Euclidean(), tracking_datapoint[:, [2, 4]]; dims=1))
-end
+end #TODO reuse Euclidean distance for futhest, diameter, mean lowest
 
-function swarm_max_interindividual_distance(tracking_datapoint)
+function swarm_max_interindividual_distance(tracking_datapoint) #TODO unused -> remove
     return maximum(pairwise(Euclidean(), tracking_datapoint[:, [2, 4]]; dims=1))
 end
+
+#TODO: add mean lowest distance?
