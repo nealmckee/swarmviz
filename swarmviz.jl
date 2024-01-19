@@ -1,5 +1,4 @@
 import AlgebraOfGraphics: set_aog_theme!
-# using Clustering
 using Colors
 using CSV
 using DataFrames
@@ -11,10 +10,14 @@ using NativeFileDialog
 using NPZ
 using Statistics
 
+const ROBOTS = 1
+const PROPERTIES = 2
+const T = 3
 const X = 2
 const Y = 4
 const θ = 5
-const T = 3
+const HVX = 6
+const HVY = 7
 const TRACKING_DIM = 5
 
 include("src/metrics.jl")

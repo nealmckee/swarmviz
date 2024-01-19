@@ -2,23 +2,27 @@ import LazySets: convex_hull
 
 function analyse_tracking(filename)
 	# Load the data and drop singular dimensions
-	tracking_data = npzread(filename)[1, :, 1:5, :]
+	tracking_data = npzread(filename)[1, :, 1:TRACKING_DIM, :]
 	#TODO: warn when contains NaNs?
 	# Get the number of robots and the number of timesteps
-	n_robots = size(tracking_data, 1)
-	n_timesteps = size(tracking_data, 3)
+	n_robots = size(tracking_data, ROBOTS)
+	n_timesteps = size(tracking_data, T)
 
 	# Add heading vector from orientation to data
 	heading_vector_xs = reshape(cos.(tracking_data[:, θ, :]), n_robots, 1, n_timesteps)
 	heading_vector_ys = reshape(sin.(tracking_data[:, θ, :]), n_robots, 1, n_timesteps)
 	velocity_xs = reshape(
-		cat(zeros(n_robots), diff(tracking_data[:, X, :]; dims=2); dims=2),
+		cat(
+			zeros(n_robots), diff(tracking_data[:, X, :]; dims=PROPERTIES); dims=PROPERTIES
+		),
 		n_robots,
 		1,
 		n_timesteps,
 	)
 	velocity_ys = reshape(
-		cat(zeros(n_robots), diff(tracking_data[:, Y, :]; dims=2); dims=2),
+		cat(
+			zeros(n_robots), diff(tracking_data[:, Y, :]; dims=PROPERTIES); dims=PROPERTIES
+		),
 		n_robots,
 		1,
 		n_timesteps,
@@ -39,15 +43,15 @@ function analyse_tracking(filename)
 		cat(
 			zeros(n_robots),
 			[
-				abs(d) < 2pi - abs(d) ? d : -sign(d)*(2pi - abs(d)) for
-				d in diff(tracking_data[:, θ, :]; dims=2)
+				abs(d) < 2pi - abs(d) ? d : -sign(d) * (2pi - abs(d)) for
+				d in diff(tracking_data[:, θ, :]; dims=PROPERTIES)
 			];
-			dims=2,
+			dims=PROPERTIES,
 		),
 		n_robots,
 		1,
 		n_timesteps,
-	) #TODO: fix wraparound
+	)
 
 	2 * pi .- angular_velocity[angular_velocity .> pi]
 	angular_acceleration = reshape(
@@ -74,14 +78,18 @@ function analyse_tracking(filename)
 
 	# precalculate all metrics for all timesteps (currently no clustering)
 	polarisation = dropdims(
-		mapslices(swarm_polarisation, tracking_data; dims=(1, 2)); dims=(1, 2)
+		mapslices(swarm_polarisation, tracking_data; dims=(ROBOTS, PROPERTIES));
+		dims=(ROBOTS, PROPERTIES),
 	)
 	rotational_order = dropdims(
-		mapslices(swarm_rotational_order, tracking_data; dims=(1, 2)); dims=(1, 2)
+		mapslices(swarm_rotational_order, tracking_data; dims=(ROBOTS, PROPERTIES));
+		dims=(ROBOTS, PROPERTIES),
 	)
 	mean_interindividual_distance = dropdims(
-		mapslices(swarm_mean_interindividual_distance, tracking_data; dims=(1, 2));
-		dims=(1, 2),
+		mapslices(
+			swarm_mean_interindividual_distance, tracking_data; dims=(ROBOTS, PROPERTIES)
+		);
+		dims=(ROBOTS, PROPERTIES),
 	)
 
 	surrounding_polygon =
@@ -101,7 +109,7 @@ function analyse_tracking(filename)
 		Euclidean()(surrounding_polygon[t][[Tuple(furthest[t])...]]...) for
 		t in 1:n_timesteps
 	]
-	area = [
+	area = [ # shoelace formula for polygon area (https://en.wikipedia.org/wiki/Shoelace_formula)
 		0.5 * abs(
 			sum(
 				surrounding_polygon[t][i][1] *
@@ -113,7 +121,7 @@ function analyse_tracking(filename)
 	]
 	roundness = [
 		4 * pi * area[t] /
-		sum(
+		sum( # perimeter
 			colwise(
 				Euclidean(),
 				hcat(surrounding_polygon[t]...),
