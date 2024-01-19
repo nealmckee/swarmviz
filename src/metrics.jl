@@ -8,7 +8,7 @@ function swarm_rotational_order(tracking_datapoint)
 	clustersize = size(tracking_datapoint, ROBOTS)
 	barycenter = sum(tracking_datapoint[:, [X, Y]]; dims=ROBOTS) ./ clustersize
 	radial_unit_vectors = mapslices(
-		x -> x / norm(x), tracking_datapoint[:, [X, Y]] .- barycenter; dims=2
+		x -> x / norm(x), tracking_datapoint[:, [X, Y]] .- barycenter; dims=PROPERTIES
 	)
 	return norm(
 		sum([
