@@ -67,7 +67,6 @@ function analyse_tracking(filename)
 	maxmindist = [
 		maximum(minimum.(eachcol(m + diagm(Inf * ones(size(m, 1)))))) for m in distmats
 	]
-	minmaxdist = [minimum(maximum.(eachcol(m))) for m in distmats]
 	area = [ #TODO: outsource
 		0.5 * abs( # shoelace formula for area of polygon (https://en.wikipedia.org/wiki/Shoelace_formula)
 			sum(
@@ -89,7 +88,6 @@ function analyse_tracking(filename)
 		"Area" => area,
 		"Roundness" => roundness,
 		"Max Min IID" => maxmindist,
-		"Min Max IID" => minmaxdist,
 	)
 	geometry = Dict( #TODO: rename
 		"Surrounding Polygon" => surrounding_polygon,
