@@ -2,7 +2,7 @@ import LazySets: convex_hull
 
 function analyse_tracking(filename)
 	# Load the data and drop singular dimensions
-	tracking_data = npzread(filename)[1, :, 1:TRACKING_DIM, :]
+	tracking_data = npzread(filename)[1, :, 1:TRACKING_DIM, :] #TODO fix weird rotation sacling!!!
 	#TODO: warn when contains NaNs?
 	# Get the number of robots and the number of timesteps
 	n_robots = size(tracking_data, ROBOTS)
@@ -16,9 +16,9 @@ function analyse_tracking(filename)
 	acceleration_xs = cat(diff(velocity_xs; dims=T), zeros(n_robots, 1, 1); dims=T)
 	acceleration_ys = cat(diff(velocity_ys; dims=T), zeros(n_robots, 1, 1); dims=T)
 	acceleration_magnitude = sqrt.(acceleration_xs .^ 2 .+ acceleration_ys .^ 2)
-	angular_velocity = cat(
+	angular_velocity = cat( #TODO: broken until input is fixed
 		zeros(n_robots, 1, 1),
-		[
+		[ #TODO reshape?
 			abs(d) < 2pi - abs(d) ? d : -sign(d) * (2pi - abs(d)) for
 			d in diff(tracking_data[:, θ:θ, :]; dims=T)
 		];
@@ -51,12 +51,12 @@ function analyse_tracking(filename)
 		pairwise(Euclidean(), permutedims(s)) for
 		s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
 	]
-	mean_interindividual_distance = mean.(distmats)
-	surrounding_polygon =
-		convex_hull.(
-			collect(eachslice(s; dims=ROBOTS)) for
-			s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
-		)
+	mean_interindividual_distance =
+		mean.(deleteat!(vec(m), 1:(size(m, 1) + 1):prod(size(m))) for m in distmats)
+	convex_hull.(
+		collect(eachslice(s; dims=ROBOTS)) for
+		s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
+	)
 	center_of_mass = [
 		mean(eachslice(s; dims=ROBOTS)) for
 		s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
