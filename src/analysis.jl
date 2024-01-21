@@ -51,12 +51,12 @@ function analyse_tracking(filename)
 		pairwise(Euclidean(), permutedims(s)) for
 		s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
 	]
-	mean_interindividual_distance =
-		mean.(deleteat!(vec(m), 1:(size(m, 1) + 1):prod(size(m))) for m in distmats)
-	convex_hull.(
-		collect(eachslice(s; dims=ROBOTS)) for
-		s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
-	)
+	mean_interindividual_distance = mean.(distmats) .* (1 .+ 1 ./ (size.(distmats, 1) .- 1))
+	surrounding_polygon =
+		convex_hull.(
+			collect(eachslice(s; dims=ROBOTS)) for
+			s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
+		)
 	center_of_mass = [
 		mean(eachslice(s; dims=ROBOTS)) for
 		s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
