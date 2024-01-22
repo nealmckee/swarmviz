@@ -4,7 +4,9 @@ using CSV
 using DataFrames
 using Distances
 using GLMakie
-using JSON
+using JSON3
+using JSONTables
+using JLD2
 using LinearAlgebra
 using NativeFileDialog
 using NPZ
@@ -31,15 +33,13 @@ struct SwarmData
 	"robots x properties x timesteps"
 	robots::Array{Float64,3}
 	"metric name => vector with metric values for each timestep"
-	metrics::Dict{String,Vector{Real}}
+	metrics::Dict{String,Vector{Float64}}
 	"name => vector with derived ata for each timestep"
 	derived::Dict{String,Any}
 end
 
 # Set up observables
-data = Observable(
-	SwarmData(zeros(1, TRACKING_DIM+10, 1), Dict(), Dict())
-) #TODO: check empty dicts without dummy data
+data = Observable(SwarmData(zeros(1, TRACKING_DIM + 10, 1), Dict(), Dict())) #TODO: check empty dicts without dummy data
 wall_data = Observable(zeros(2, 1))
 wall_collisions = Observable(falses(1, 1))
 agent_collisions = Observable(falses(1, 1))
@@ -47,6 +47,7 @@ n_timesteps = @lift size($data.robots, T)
 timesteps = @lift 1:($n_timesteps)
 isplaying = Observable(false)
 time()
+
 # Preload data for easier debugging #TODO: remove when done
 tracking_path = "data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_summaryd.npy"
 wall_path = "data/A0_09_B0_0/w3_summaryd.npy"
@@ -158,7 +159,16 @@ end
 
 on(export_metrics_button.clicks) do c
 	export_folder = pick_folder()
-	CSV.write(joinpath(export_folder, "metrics.csv"), DataFrame(data[].analysis))
+	robots_df = DataFrame(
+		reshape(permutedims(data[].robots, (1, 3, 2)), (:, size(data[].robots, 2), 1))[
+			:, :, 1
+		],
+		[:t, :x, :y, :z, :rotation],
+	)
+	tracking_df.robot_id = repeat(1:size(data[].robots, 1); inner=size(data[].robots, 3))
+	CSV.write("robots.csv", robots_df)
+	CSV.write("metrics.csv", DataFrame(data[].metrics))
+	JSON3.write("derived.json", data[].derived) #TODO: jld2 or hdf5 or other?
 end
 
 # axes to hold the metric plots
