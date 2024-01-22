@@ -290,11 +290,7 @@ diameter = lines!(
 	@lift Point2f.(
 		eachslice(
 			$data.robots[
-				[
-					Tuple(
-						$data.derived["Furthest Robots"][$(time_slider.sliders[1].value)]
-					)...,
-				],
+				$data.derived["Furthest Robots"][$(time_slider.sliders[1].value)],
 				[X, Z],
 				$(time_slider.sliders[1].value),
 			];

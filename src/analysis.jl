@@ -63,7 +63,7 @@ function analyse_tracking(filename)
 	]
 	findmaxdist = [findmax(m) for m in distmats]
 	diameter = [f[1] for f in findmaxdist]
-	furthest = [f[2] for f in findmaxdist]
+	furthest = [[f[2][1], f[2][2]] for f in findmaxdist]
 	maxmindist = [
 		maximum(minimum.(eachcol(m + diagm(Inf * ones(size(m, 1)))))) for m in distmats
 	]
@@ -89,7 +89,7 @@ function analyse_tracking(filename)
 		"Roundness" => roundness,
 		"Max Min IID" => maxmindist,
 	)
-	geometry = Dict( #TODO: rename
+	derived = Dict( #TODO: rename
 		"Surrounding Polygon" => surrounding_polygon,
 		"Center of Mass" => center_of_mass,
 		"Furthest Robots" => furthest,
@@ -99,7 +99,7 @@ function analyse_tracking(filename)
 	return SwarmData(
 		robot_data,
 		metrics,
-		geometry,
+		derived,
 	)
 end
 
@@ -112,7 +112,7 @@ function analyse_wall(filename)
 end
 
 function process_collisions(filename)
-	collision_dict = JSON.parse(String(read(filename)))["0"]
+	collision_dict = JSON3.read(filename, Dict)["0"]
 	collisions = falses(
 		length(keys(collision_dict)), maximum(vcat(values(collision_dict)...))
 	)
