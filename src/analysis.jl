@@ -2,25 +2,25 @@ import LazySets: convex_hull
 
 function analyse_tracking(filename)
 	# Load the data and drop singular dimensions
-	tracking_data = npzread(filename)[1, :, 1:TRACKING_DIM, :] #TODO fix weird rotation sacling!!!
+	robot_data = npzread(filename)[1, :, 1:TRACKING_DIM, :] #TODO fix weird rotation sacling!!!
 	#TODO: warn when contains NaNs?
 	# Get the number of robots and the number of timesteps
-	n_robots = size(tracking_data, ROBOTS)
+	n_robots = size(robot_data, ROBOTS)
 
 	# Add heading vector from orientation to data
-	heading_vector_xs = cos.(tracking_data[:, θ:θ, :])
-	heading_vector_ys = sin.(tracking_data[:, θ:θ, :])
-	velocity_xs = cat(zeros(n_robots, 1, 1), diff(tracking_data[:, X:X, :]; dims=T); dims=T)
-	velocity_ys = cat(zeros(n_robots, 1, 1), diff(tracking_data[:, Y:Y, :]; dims=T); dims=T)
-	velocity_magnitude = sqrt.(velocity_xs .^ 2 .+ velocity_ys .^ 2)
+	heading_vector_xs = cos.(robot_data[:, θ:θ, :])
+	heading_vector_zs = sin.(robot_data[:, θ:θ, :])
+	velocity_xs = cat(zeros(n_robots, 1, 1), diff(robot_data[:, X:X, :]; dims=T); dims=T)
+	velocity_zs = cat(zeros(n_robots, 1, 1), diff(robot_data[:, Z:Z, :]; dims=T); dims=T)
+	velocity_magnitude = sqrt.(velocity_xs .^ 2 .+ velocity_zs .^ 2)
 	acceleration_xs = cat(diff(velocity_xs; dims=T), zeros(n_robots, 1, 1); dims=T)
-	acceleration_ys = cat(diff(velocity_ys; dims=T), zeros(n_robots, 1, 1); dims=T)
-	acceleration_magnitude = sqrt.(acceleration_xs .^ 2 .+ acceleration_ys .^ 2)
+	acceleration_zs = cat(diff(velocity_zs; dims=T), zeros(n_robots, 1, 1); dims=T)
+	acceleration_magnitude = sqrt.(acceleration_xs .^ 2 .+ acceleration_zs .^ 2)
 	angular_velocity = cat( #TODO: broken until input is fixed
 		zeros(n_robots, 1, 1),
 		[ #TODO reshape?
 			abs(d) < 2pi - abs(d) ? d : -sign(d) * (2pi - abs(d)) for
-			d in diff(tracking_data[:, θ:θ, :]; dims=T)
+			d in diff(robot_data[:, θ:θ, :]; dims=T)
 		];
 		dims=T,
 	)
@@ -28,15 +28,15 @@ function analyse_tracking(filename)
 		diff(angular_velocity; dims=T), zeros(n_robots, 1, 1); dims=T
 	)
 
-	tracking_data = cat(
-		tracking_data,
+	robot_data = cat(
+		robot_data,
 		heading_vector_xs,
-		heading_vector_ys,
+		heading_vector_zs,
 		velocity_xs,
-		velocity_ys,
+		velocity_zs,
 		velocity_magnitude,
 		acceleration_xs,
-		acceleration_ys,
+		acceleration_zs,
 		acceleration_magnitude,
 		angular_velocity,
 		angular_acceleration;
@@ -45,21 +45,21 @@ function analyse_tracking(filename)
 
 	# precalculate all metrics for all timesteps (currently no clustering)
 	#TODO: more outsourcing to metrics.jl?
-	polarisation = swarm_polarisation.(eachslice(tracking_data; dims=T))
-	rotational_order = swarm_rotational_order.(eachslice(tracking_data; dims=T))
+	polarisation = swarm_polarisation.(eachslice(robot_data; dims=T))
+	rotational_order = swarm_rotational_order.(eachslice(robot_data; dims=T))
 	distmats = [
 		pairwise(Euclidean(), permutedims(s)) for
-		s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
+		s in eachslice(robot_data[:, [X, Z], :]; dims=T)
 	]
 	mean_interindividual_distance = mean.(distmats) .* (1 .+ 1 ./ (size.(distmats, 1) .- 1))
 	surrounding_polygon =
 		convex_hull.(
 			collect(eachslice(s; dims=ROBOTS)) for
-			s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
+			s in eachslice(robot_data[:, [X, Z], :]; dims=T)
 		)
 	center_of_mass = [
 		mean(eachslice(s; dims=ROBOTS)) for
-		s in eachslice(tracking_data[:, [X, Y], :]; dims=T)
+		s in eachslice(robot_data[:, [X, Z], :]; dims=T)
 	]
 	findmaxdist = [findmax(m) for m in distmats]
 	diameter = [f[1] for f in findmaxdist]
@@ -97,15 +97,14 @@ function analyse_tracking(filename)
 	)
 
 	return SwarmData(
-		tracking_data[:, 1:TRACKING_DIM, :],
-		tracking_data[:, TRACKING_DIM:end, :],
+		robot_data,
 		metrics,
 		geometry,
 	)
 end
 
 function analyse_wall(filename)
-	wd = npzread(filename)[1, 1, [X, Y], :]
+	wd = npzread(filename)[1, 1, [X, Z], :]
 	# Remove columns with NaN values from wall_data
 	wd = wd[:, .!isnan.(wd[1, :])]
 	wd = wd[:, .!isnan.(wd[2, :])]

@@ -14,10 +14,10 @@ const ROBOTS = 1
 const PROPERTIES = 2
 const T = 3
 const X = 2
-const Y = 4
+const Z = 4
 const θ = 5
 const HVX = 6
-const HVY = 7
+const HVZ = 7
 const TRACKING_DIM = 5
 
 include("src/metrics.jl")
@@ -29,23 +29,21 @@ Struct that holds all the data input as well as everything we calculate.
 """
 struct SwarmData
 	"robots x properties x timesteps"
-	tracking::Array{Float64,3}
-	"robots x properties x timesteps"
-	derived::Array{Float64,3}
-	"metric name => datavector"
-	analysis::Dict{String,Vector{Real}}
-	"name => datavector"
-	geometry::Dict{String,Any} # TODO: rename
+	robots::Array{Float64,3}
+	"metric name => vector with metric values for each timestep"
+	metrics::Dict{String,Vector{Real}}
+	"name => vector with derived ata for each timestep"
+	derived::Dict{String,Any}
 end
 
 # Set up observables
 data = Observable(
-	SwarmData(zeros(1, TRACKING_DIM, 1), zeros(1, TRACKING_DIM, 1), Dict(), Dict())
+	SwarmData(zeros(1, TRACKING_DIM+10, 1), Dict(), Dict())
 ) #TODO: check empty dicts without dummy data
 wall_data = Observable(zeros(2, 1))
 wall_collisions = Observable(falses(1, 1))
 agent_collisions = Observable(falses(1, 1))
-n_timesteps = @lift size($data.tracking, T)
+n_timesteps = @lift size($data.robots, T)
 timesteps = @lift 1:($n_timesteps)
 isplaying = Observable(false)
 time()
@@ -63,7 +61,7 @@ agent_collisions[] = process_collisions(agent_collisons_path)
 GLMakie.activate!(; title="SwarmViz")
 fig = Figure(; size=(960, 600))
 
-swarm_animation = Axis(fig[1, 1]; xlabel="X", ylabel="Y", autolimitaspect=1)
+swarm_animation = Axis(fig[1, 1]; xlabel="X", ylabel="Z", autolimitaspect=1)
 
 #TODO: use space on the left
 time_slider = SliderGrid(fig[2, 1:2], (label="Timestep", range=timesteps, startvalue=1))
@@ -131,10 +129,10 @@ on(import_button.clicks) do c
 	autolimits!(metric_axes[1])
 	limits!(
 		swarm_animation,
-		minimum(data[].tracking[:, 2, :]) - 100,
-		maximum(data[].tracking[:, 2, :]) + 100,
-		minimum(data[].tracking[:, 4, :]) - 100,
-		maximum(data[].tracking[:, 4, :]) + 100,
+		minimum(data[].robots[:, X, :]) - 100,
+		maximum(data[].robots[:, X, :]) + 100,
+		minimum(data[].robots[:, Z, :]) - 100,
+		maximum(data[].robots[:, Z, :]) + 100,
 	)
 	set_close_to!(time_slider.sliders[1], 1)
 end
@@ -177,7 +175,7 @@ collisions_axis = Axis(
 linkxaxes!(metric_axes..., collisions_axis)
 
 # menus to select which metrics to plot (inside the metric axes)
-metrics_tuples = @lift Tuple.(collect($data.analysis))
+metrics_tuples = @lift Tuple.(collect($data.metrics))
 metric_menus = [
 	Menu(
 		metrics_grid[i, 1, Top()];
@@ -190,14 +188,14 @@ metric_menus = [
 	) for (i, default) in enumerate(["Polarisation", "Rotational Order", "Diameter"]) #TODO remove defaults after debugging
 ]
 # Make coordinates and rotation responsive to the time slider
-x, y, r = [@lift $data.tracking[:, i, $(time_slider.sliders[1].value)] for i in [2, 4, 5]]
+x, y, r = [@lift $data.robots[:, i, $(time_slider.sliders[1].value)] for i in [X, Z, θ]]
 
 # make color of robots dependend on collisions
 g = @lift ( #TODO: refactor
-	if size($agent_collisions, 1) != size($data.tracking, 1) ||
-		size($wall_collisions, 1) != size($data.tracking, 1) ||
+	if size($agent_collisions, 1) != size($data.robots, 1) ||
+		size($wall_collisions, 1) != size($data.robots, 1) ||
 		!$(animation_toggles[1].active)
-		repeat([RGBA(0, 0, 0, 0)], size($data.tracking, 1))
+		repeat([RGBA(0, 0, 0, 0)], size($data.robots, 1))
 	else
 		[
 			if checkbounds(Bool, $agent_collisions, 1, $(time_slider.sliders[1].value)) &&
@@ -267,7 +265,7 @@ poly!(
 # plot the surrounding polygon and connect to toggle
 surrounding_polygon = poly!(
 	swarm_animation,
-	@lift Point2f.($data.geometry["Surrounding Polygon"][$(time_slider.sliders[1].value)]);
+	@lift Point2f.($data.derived["Surrounding Polygon"][$(time_slider.sliders[1].value)]);
 	color=:transparent,
 	strokecolor="#8f8f8f",
 	strokewidth=1,
@@ -279,7 +277,7 @@ connect!(surrounding_polygon.visible, animation_toggles[2].active)
 # plot the center of mass and connect to toggle
 center_of_mass = scatter!(
 	swarm_animation,
-	@lift Point2f($data.geometry["Center of Mass"][$(time_slider.sliders[1].value)]);
+	@lift Point2f($data.derived["Center of Mass"][$(time_slider.sliders[1].value)]);
 	color="#8f8f8f",
 	markersize=12,
 	marker=:xcross,
@@ -291,13 +289,13 @@ diameter = lines!(
 	swarm_animation,
 	@lift Point2f.(
 		eachslice(
-			$data.tracking[
+			$data.robots[
 				[
 					Tuple(
-						$data.geometry["Furthest Robots"][$(time_slider.sliders[1].value)]
+						$data.derived["Furthest Robots"][$(time_slider.sliders[1].value)]
 					)...,
 				],
-				[X, Y],
+				[X, Z],
 				$(time_slider.sliders[1].value),
 			];
 			dims=ROBOTS,
