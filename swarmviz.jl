@@ -1,11 +1,9 @@
 import AlgebraOfGraphics: set_aog_theme!
 using Colors
-using CSV
 using DataFrames
 using Distances
 using GLMakie
 using JSON3
-using JSONTables
 using JLD2
 using LinearAlgebra
 using NativeFileDialog
@@ -183,11 +181,13 @@ on(export_metrics_button.clicks) do c
 		],
 	)
 	robots_df.robot_id = repeat(1:size(data[].robots, 1); inner=size(data[].robots, 3))
-	# CSV.write("robots.csv", robots_df)
-	# CSV.write("metrics.csv", DataFrame(data[].metrics))
-    Parquet2.writefile("robots.parquet", robots_df)
-    Parquet2.writefile("metrics.parquet", DataFrame(data[].metrics))
-	# JSON3.write("derived.json", data[].derived) #TODO: jld2 or hdf5 or other?
+	Parquet2.writefile("robots.parquet", robots_df)
+	Parquet2.writefile("metrics.parquet", DataFrame(data[].metrics))
+    distance_matrices = stack(data[].derived["Distance Matrices"])
+    furthest_robots = stack(data[].derived["Furthest Robots"])
+    center_of_mass = stack(data[].derived["Center of Mass"])
+	JLD2.@save "derived.jld2" distance_matrices furthest_robots center_of_mass
+	JSON3.write("convex_hull.json", data[].derived["Convex Hull"])
 end
 
 # axes to hold the metric plots
