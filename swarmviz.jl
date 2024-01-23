@@ -19,6 +19,8 @@ const Z = 4
 const θ = 5
 const HVX = 6
 const HVZ = 7
+const ACCX = 11
+const ACCZ = 12
 const TRACKING_DIM = 5
 
 include("src/metrics.jl")
@@ -183,9 +185,9 @@ on(export_metrics_button.clicks) do c
 	robots_df.robot_id = repeat(1:size(data[].robots, 1); inner=size(data[].robots, 3))
 	Parquet2.writefile("robots.parquet", robots_df)
 	Parquet2.writefile("metrics.parquet", DataFrame(data[].metrics))
-    distance_matrices = stack(data[].derived["Distance Matrices"])
-    furthest_robots = stack(data[].derived["Furthest Robots"])
-    center_of_mass = stack(data[].derived["Center of Mass"])
+	distance_matrices = stack(data[].derived["Distance Matrices"])
+	furthest_robots = stack(data[].derived["Furthest Robots"])
+	center_of_mass = stack(data[].derived["Center of Mass"])
 	JLD2.@save "derived.jld2" distance_matrices furthest_robots center_of_mass
 	JSON3.write("convex_hull.json", data[].derived["Convex Hull"])
 end
@@ -344,7 +346,11 @@ for (i, (menu, axis)) in enumerate(zip(metric_menus, metric_axes))
 		end
 		if !isnothing(s)
 			lines!(axis, s; linewidth=1, color=Makie.wong_colors()[i])
-			limits!(axis, (nothing, nothing), maximum(s) <= 1 ? (0, 1) : (nothing, nothing))
+			limits!(
+				axis,
+				(nothing, nothing),
+				maximum(s) <= 1 && minimum(s) >= 0 ? (0, 1) : (nothing, nothing),
+			)
 		end
 	end
 	notify(menu.selection) #TODO remove after debugging
