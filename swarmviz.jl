@@ -294,7 +294,7 @@ poly!(
 # plot the surrounding polygon and connect to toggle
 surrounding_polygon = poly!(
 	swarm_animation,
-	@lift Point2f.($data.derived["Surrounding Polygon"][$(time_slider.sliders[1].value)]);
+	@lift Point2f.($data.derived["Convex Hull"][$(time_slider.sliders[1].value)]);
 	color=:transparent,
 	strokecolor="#8f8f8f",
 	strokewidth=1,

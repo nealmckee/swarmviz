@@ -90,7 +90,7 @@ function analyse_tracking(filename)
 		"Max Min IID" => maxmindist,
 	)
 	derived = Dict( #TODO: rename
-		"Surrounding Polygon" => surrounding_polygon,
+		"Convex Hull" => surrounding_polygon,
 		"Center of Mass" => center_of_mass,
 		"Furthest Robots" => furthest,
 		"Distance Matrices" => distmats,
