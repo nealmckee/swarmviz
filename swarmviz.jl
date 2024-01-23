@@ -10,6 +10,7 @@ using JLD2
 using LinearAlgebra
 using NativeFileDialog
 using NPZ
+using Parquet2
 using Statistics
 
 const ROBOTS = 1
@@ -163,12 +164,30 @@ on(export_metrics_button.clicks) do c
 		reshape(permutedims(data[].robots, (1, 3, 2)), (:, size(data[].robots, 2), 1))[
 			:, :, 1
 		],
-		[:t, :x, :y, :z, :rotation],
+		[
+			:t,
+			:x,
+			:y,
+			:z,
+			:angle_xz,
+			:heading_x,
+			:heading_z,
+			:velocity_x,
+			:velocity_z,
+			:l2norm_velocity_xy,
+			:acceleration_x,
+			:acceleration_z,
+			:l2norm_acceleration_xz,
+			:angular_velocity,
+			:angular_acceleration,
+		],
 	)
-	tracking_df.robot_id = repeat(1:size(data[].robots, 1); inner=size(data[].robots, 3))
-	CSV.write("robots.csv", robots_df)
-	CSV.write("metrics.csv", DataFrame(data[].metrics))
-	JSON3.write("derived.json", data[].derived) #TODO: jld2 or hdf5 or other?
+	robots_df.robot_id = repeat(1:size(data[].robots, 1); inner=size(data[].robots, 3))
+	# CSV.write("robots.csv", robots_df)
+	# CSV.write("metrics.csv", DataFrame(data[].metrics))
+    Parquet2.writefile("robots.parquet", robots_df)
+    Parquet2.writefile("metrics.parquet", DataFrame(data[].metrics))
+	# JSON3.write("derived.json", data[].derived) #TODO: jld2 or hdf5 or other?
 end
 
 # axes to hold the metric plots
