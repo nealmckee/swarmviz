@@ -37,10 +37,13 @@ struct SwarmData
 	metrics::Dict{String,Vector{Float64}}
 	"name => vector with derived ata for each timestep"
 	derived::Dict{String,Any}
+	"one clustering per timesteps"
+	clustering::Vector{Hclust{Float64}}
 end
 
 # Set up observables
-data = Observable(SwarmData(zeros(1, TRACKING_DIM + 10, 1), Dict(), Dict())) #TODO: check empty dicts without dummy data
+#TODO: check empty dicts without dummy data
+data = Observable(SwarmData(zeros(1, TRACKING_DIM + 10, 1), Dict(), Dict(), []))
 wall_data = Observable(zeros(2, 1))
 wall_collisions = Observable(falses(1, 1))
 agent_collisions = Observable(falses(1, 1))
@@ -85,11 +88,14 @@ animation_settings = SliderGrid(
 	(label="FPS", range=1:1:120, startvalue=30),
 	(label="Skip", range=0:1:99, startvalue=0),
 )
-animation_toggles = [Toggle(fig) for _ in 1:4]
+animation_toggles = [Toggle(fig) for _ in 1:5]
 animation_controls[2:end, 3] = grid!(
 	hcat(
 		animation_toggles,
-		[Label(fig, l; halign=:left) for l in ["Collisions", "Polygon", "CoM", "Diameter"]],
+		[
+			Label(fig, l; halign=:left) for
+			l in ["Clustering", "Collisions", "Polygon", "CoM", "Diameter"]
+		],
 	);
 	default_rowgap=3,
 	default_colgap=3,
@@ -122,7 +128,7 @@ end
 import_button, wall_button, collision_button, export_metrics_button =
 	data_controls[1:2, 1:2] = [
 		Button(fig; label=l, halign=:left) for
-		l in ["Import Tracking", "Import Wall", "Import Collisions", "Export Metrics"]
+		l in ["Import Tracking", "Import Wall", "Import Collisions", "Export All"]
 	]
 
 on(import_button.clicks) do c
@@ -221,11 +227,22 @@ metric_menus = [
 # Make coordinates and rotation responsive to the time slider
 x, y, r = [@lift $data.robots[:, i, $(time_slider.sliders[1].value)] for i in [X, Z, θ]]
 
-# make color of robots dependend on collisions
+# make color of robots dependent on clustering
+c = @lift (
+	if !$(animation_toggles[1].active)
+		repeat([RGBA(0, 0, 0, 1)], size($data.robots, 1))
+	else
+		Makie.wong_colors()[collect(
+			cutree($data.clustering[$(time_slider.sliders[1].value)]; k=3)
+		)]
+	end
+)
+
+# make glowcolor of robots dependend on collisions
 g = @lift ( #TODO: refactor
 	if size($agent_collisions, 1) != size($data.robots, 1) ||
 		size($wall_collisions, 1) != size($data.robots, 1) ||
-		!$(animation_toggles[1].active)
+		!$(animation_toggles[2].active)
 		repeat([RGBA(0, 0, 0, 0)], size($data.robots, 1))
 	else
 		[
@@ -275,7 +292,7 @@ scatter!(
 	marker=robot_marker,
 	markersize=6,
 	rotations=r,
-	color=:black,
+	color=c,
 	glowcolor=g,
 	glowwidth=6,
 )
@@ -303,7 +320,7 @@ surrounding_polygon = poly!(
 	linestyle=:dash,
 	closed=true,
 )
-connect!(surrounding_polygon.visible, animation_toggles[2].active)
+connect!(surrounding_polygon.visible, animation_toggles[3].active)
 
 # plot the center of mass and connect to toggle
 center_of_mass = scatter!(
@@ -313,7 +330,7 @@ center_of_mass = scatter!(
 	markersize=12,
 	marker=:xcross,
 )
-connect!(center_of_mass.visible, animation_toggles[3].active)
+connect!(center_of_mass.visible, animation_toggles[4].active)
 
 #plot the diameter and connect to toggle
 diameter = lines!(
@@ -331,7 +348,7 @@ diameter = lines!(
 	color="#8f8f8f",
 	linewidth=1,
 )
-connect!(diameter.visible, animation_toggles[4].active)
+connect!(diameter.visible, animation_toggles[5].active)
 
 # plot the metrics when one is chosen from the corresponding menu
 for (i, (menu, axis)) in enumerate(zip(metric_menus, metric_axes))
@@ -372,7 +389,7 @@ collision_plots = [
 	)
 ]
 for p in collision_plots
-	connect!(p.visible, animation_toggles[1].active)
+	connect!(p.visible, animation_toggles[2].active)
 end
 
 # plot timestep markers
@@ -382,4 +399,4 @@ end
 #TODO: add rectangle in collisions plot?
 
 # Display the figure in it’s own window
-fig
+display(fig)
