@@ -2,7 +2,13 @@
 
 julia_version = "1.10.0"
 manifest_format = "2.0"
-project_hash = "b47b4f728fff16d17b047beb7290e26aac23db35"
+project_hash = "80fe0d91571d5f3d9428a54e5ced34fc89660c4f"
+
+[[deps.AMD]]
+deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse_jll"]
+git-tree-sha1 = "45a1272e3f809d36431e57ab22703c6896b8908f"
+uuid = "14f7f29c-3bd6-536c-9a0b-7339e30b5a3e"
+version = "0.5.3"
 
 [[deps.ATK_jll]]
 deps = ["Artifacts", "Glib_jll", "JLLWrappers", "Libdl"]
@@ -46,6 +52,12 @@ deps = ["Colors", "Dates", "Dictionaries", "FileIO", "GLM", "GeoInterface", "Geo
 git-tree-sha1 = "3fbdee81b0cdc2b106b681dd2b9d4bdc60ca35a2"
 uuid = "cbdf2221-f076-402e-a563-3d30da359d67"
 version = "0.6.18"
+
+[[deps.AlgebraicMultigrid]]
+deps = ["CommonSolve", "LinearAlgebra", "Printf", "Reexport", "SparseArrays"]
+git-tree-sha1 = "796eedcb42226861a51d92d28ee82d4985ee860b"
+uuid = "2169fc97-5a83-5252-b627-83903c6c433c"
+version = "0.5.1"
 
 [[deps.Animations]]
 deps = ["Colors"]
@@ -277,6 +289,11 @@ version = "0.12.10"
 git-tree-sha1 = "08c8b6831dc00bfea825826be0bc8336fc369860"
 uuid = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 version = "1.0.2"
+
+[[deps.CommonSolve]]
+git-tree-sha1 = "0eee5eb66b1cf62cd6ad1b460238e60e4b09400c"
+uuid = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+version = "0.2.4"
 
 [[deps.CommonSubexpressions]]
 deps = ["MacroTools", "Test"]
@@ -886,6 +903,12 @@ git-tree-sha1 = "42d5f897009e7ff2cf88db414a389e5ed1bdd023"
 uuid = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 version = "1.10.0"
 
+[[deps.IterativeSolvers]]
+deps = ["LinearAlgebra", "Printf", "Random", "RecipesBase", "SparseArrays"]
+git-tree-sha1 = "b435d190ef8369cf4d79cc9dd5fba88ba0165307"
+uuid = "42fd0dbc-a981-5370-80f2-aaf504508153"
+version = "0.9.3"
+
 [[deps.IteratorInterfaceExtensions]]
 git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
 uuid = "82899510-4779-5014-852e-03e436cf321d"
@@ -1104,6 +1127,12 @@ git-tree-sha1 = "3a994404d3f6709610701c7dabfc03fed87a81f8"
 uuid = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
 version = "0.9.1"
 
+[[deps.LimitedLDLFactorizations]]
+deps = ["AMD", "LinearAlgebra", "SparseArrays"]
+git-tree-sha1 = "07b3c94ba4decdd855770beddeab9187be03d6b8"
+uuid = "f5a24dde-3ab7-510b-b81b-6a72c6098d3b"
+version = "0.5.1"
+
 [[deps.LineSearches]]
 deps = ["LinearAlgebra", "NLSolversBase", "NaNMath", "Parameters", "Printf"]
 git-tree-sha1 = "7bbea35cec17305fc70a0e5b4641477dc0789d9d"
@@ -1119,6 +1148,18 @@ deps = ["LinearAlgebra", "Mods", "Primes", "SimplePolynomials"]
 git-tree-sha1 = "d76cec8007ec123c2b681269d40f94b053473fcf"
 uuid = "9b3f67b0-2d00-526e-9884-9e4938f8fb88"
 version = "0.2.7"
+
+[[deps.LinearMaps]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "9df2ab050ffefe870a09c7b6afdb0cde381703f2"
+uuid = "7a12625a-238d-50fd-b39a-03d52299707e"
+version = "3.11.1"
+weakdeps = ["ChainRulesCore", "SparseArrays", "Statistics"]
+
+    [deps.LinearMaps.extensions]
+    LinearMapsChainRulesCoreExt = "ChainRulesCore"
+    LinearMapsSparseArraysExt = "SparseArrays"
+    LinearMapsStatisticsExt = "Statistics"
 
 [[deps.Loess]]
 deps = ["Distances", "LinearAlgebra", "Statistics", "StatsAPI"]
@@ -1336,6 +1377,12 @@ version = "1.1.1"
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 version = "1.2.0"
 
+[[deps.NoiseRobustDifferentiation]]
+deps = ["IterativeSolvers", "LinearAlgebra", "LinearMaps", "Preconditioners", "SparseArrays"]
+git-tree-sha1 = "108fc03c3419164898540545988d0df13fa5239b"
+uuid = "470638dc-0858-4731-a73a-678bdc45695b"
+version = "0.2.4"
+
 [[deps.Observables]]
 git-tree-sha1 = "7438a59546cf62428fc9d1bc94729146d37a7225"
 uuid = "510215fc-4207-5dde-b226-833fc4488ee2"
@@ -1542,6 +1589,12 @@ deps = ["Preferences"]
 git-tree-sha1 = "03b4c25b43cb84cee5c90aa9b5ea0a78fd848d2f"
 uuid = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 version = "1.2.0"
+
+[[deps.Preconditioners]]
+deps = ["AlgebraicMultigrid", "LimitedLDLFactorizations", "LinearAlgebra", "SparseArrays"]
+git-tree-sha1 = "a02fc23058e6264b0f73523e99e2dd1a20232dff"
+uuid = "af69fa37-3177-5a40-98ee-561f696e4fcd"
+version = "0.6.1"
 
 [[deps.Preferences]]
 deps = ["TOML"]
