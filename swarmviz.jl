@@ -44,7 +44,7 @@ struct SwarmData
 end
 
 # Set up observables
-#TODO: check empty dicts without dummy data
+#TODO: check without dummy data
 data = Observable(SwarmData(zeros(1, TRACKING_DIM + 10, 1), Dict(), Dict(), []))
 wall_data = Observable(zeros(2, 1))
 wall_collisions = Observable(falses(1, 1))
@@ -106,7 +106,7 @@ play_button = Button(
 	controls[1, 1]; label=play_button_text, width=60, height=60, font=:ui_font_bold
 )
 
-animation_setting_grid = GridLayout(controls[1, 2])
+animation_setting_grid = GridLayout(controls[1, 2], default_rowgap = 6)
 fps = Slider(animation_setting_grid[1, 2]; range=1:1:120, startvalue=30)
 Label(animation_setting_grid[1, 1], "FPS"; halign=:left, font=:ui_font)
 Label(
