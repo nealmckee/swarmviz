@@ -144,10 +144,9 @@ robot_controls[1, 1:3] = grid!(
 	default_colgap=15,
 	halign=:left,
 )
-heightrange = @lift round.(Int,
-	range(
-		(extrema(reduce(vcat, [c.heights for c in $data.clustering])) .+ (-10, 10))..., 3000
-	)
+heightrange = @lift round.(
+	range(extrema(reduce(vcat, [c.heights for c in $data.clustering]))..., 3000),
+	sigdigits=4,
 )
 threshold = Slider(
 	robot_controls[2, 2]; range=heightrange, startvalue=(@lift median($heightrange))
