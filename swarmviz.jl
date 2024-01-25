@@ -50,7 +50,7 @@ agent_collisions = Observable(falses(1, 1))
 n_timesteps = @lift size($data.robots, T)
 timesteps = @lift 1:($n_timesteps)
 isplaying = Observable(false)
-time()
+discrete_palette = Observable(Makie.wong_colors())
 
 # Preload data for easier debugging #TODO: remove when done
 tracking_path = "data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_summaryd.npy"
@@ -61,45 +61,85 @@ wall_data[] = analyse_wall(wall_path)
 data[] = analyse_tracking(tracking_path)
 wall_collisions[] = process_collisions(wall_collisons_path)
 agent_collisions[] = process_collisions(agent_collisons_path)
+discrete_palette[] = distinguishable_colors(
+	size(data[].robots, 1), RGB.(Makie.wong_colors())
+)
 
 # Set up the figure
 GLMakie.activate!(; title="SwarmViz")
 fig = Figure(; size=(960, 600))
 
-swarm_animation = Axis(fig[1, 1]; xlabel="X", ylabel="Z", autolimitaspect=1)
-
-#TODO: use space on the left
-time_slider = SliderGrid(fig[2, 1:2], (label="Timestep", range=timesteps, startvalue=1))
-animation_controls = GridLayout(fig[3, 1]; default_rowgap=12, default_colgap=12)
-
+swarm_animation = Axis(
+	fig[1, 1]; xlabel="X", ylabel="Z", autolimitaspect=1, alignmode=Outside()
+)
 metrics_grid = GridLayout(fig[1, 2])
-data_controls = GridLayout(fig[3, 2]; default_rowgap=2)
+#TODO: use space on the left somehow?
+time_grid = GridLayout(fig[2, 1:2])
+controls = GridLayout(fig[3, 1:2])
 
 #adjust the width of the column with the swarm animation
 colsize!(fig.layout, 1, Relative(0.5))
 colsize!(fig.layout, 2, Relative(0.5))
 
+Label(time_grid[1, 1]; text="Timestep", halign=:left)
+time_slider = Slider(time_grid[1, 2]; range=timesteps, startvalue=1)
+Label(time_grid[1, 3], @lift string($(time_slider.value)); halign=:right)
+# on(timestep_text.stored_string) do s
+# 	time_slider.value[] = parse(Int64, s)
+# end
+# on(time_slider.value) do v
+# 	timestep_text.stored_string.val = string(v)
+# end
+
 # create play/pause button with reactive label
 play_button_text = @lift $isplaying[] ? "Pause" : "Play"
-play_button = Button(animation_controls[2, 1]; label=play_button_text, width=60)
+play_button = Button(controls[1, 1]; label=play_button_text, width=60, height=60)
 
 animation_settings = SliderGrid(
-	animation_controls[2, 2],
+	controls[1, 2],
 	(label="FPS", range=1:1:120, startvalue=30),
 	(label="Skip", range=0:1:99, startvalue=0),
 )
-animation_toggles = [Toggle(fig) for _ in 1:5]
-animation_controls[2:end, 3] = grid!(
+colsize!(controls, 2, Relative(0.25))
+animation_toggles = [Toggle(fig) for _ in 1:3]
+controls[1, 3] = grid!(
 	hcat(
+		[Label(fig, l; halign=:left) for l in ["Polygon", "CoM", "Diameter"]],
 		animation_toggles,
-		[
-			Label(fig, l; halign=:left) for
-			l in ["Clustering", "Collisions", "Polygon", "CoM", "Diameter"]
-		],
 	);
 	default_rowgap=3,
-	default_colgap=3,
+	default_colgap=6,
+	tellheight=true,
 )
+robot_controls = GridLayout(controls[1, 4]; default_rowgap=3)
+colsize!(controls, 4, Auto())
+robot_toggles = [Toggle(fig) for _ in 1:2]
+robot_controls[1, 1:3] = grid!(
+	hcat(
+		[Label(fig, l; halign=:left) for l in ["Collisions", "Clustering"]], robot_toggles
+	);
+	default_rowgap=3,
+	default_colgap=15,
+	halign=:left,
+)
+Label(robot_controls[2, 1], "Threshold"; halign=:left)
+threshold_slider = Slider(
+	robot_controls[2, 2];
+	range=(@lift round.(
+		range(
+			(extrema(reduce(vcat, [c.heights for c in $data.clustering])) .+ (-1, 1))...,
+			1000,
+		)
+	)),
+	startvalue=(@lift median(
+		range(
+			(extrema(reduce(vcat, [c.heights for c in $data.clustering])) .+ (-1, 1))...,
+			1000,
+		),
+	)),
+	# width=150,
+)
+Label(robot_controls[2, 3], @lift string($(threshold_slider.value)); halign=:right)
 
 # start animation loop on buttonpress, the plot then automatically updates
 # as it’s dependent on the time slider
@@ -108,23 +148,22 @@ on(play_button.clicks) do c
 end
 on(play_button.clicks) do c
 	@async while isplaying[] &&
-				 time_slider.sliders[1].value[] <
+				 time_slider.value[] <
 				 n_timesteps[] - animation_settings.sliders[2].value[] - 1
 		frame_start = time()
 		set_close_to!(
-			time_slider.sliders[1],
-			time_slider.sliders[1].value[] + 1 + animation_settings.sliders[2].value[],
+			time_slider, time_slider.value[] + 1 + animation_settings.sliders[2].value[]
 		)
 		sleep(max(1 / animation_settings.sliders[1].value[] - time() + frame_start, 0))
 		isopen(fig.scene) || break # ensures computations stop if window is closed
-		if time_slider.sliders[1].value[] >=
-			n_timesteps[] - animation_settings.sliders[2].value[] - 1
+		if time_slider.value[] >= n_timesteps[] - animation_settings.sliders[2].value[] - 1
 			isplaying[] = !isplaying[]
 		end
 	end
 end
 
 # create buttons to import/export data
+data_controls = GridLayout(controls[1, 5]; default_rowgap=3, default_colgap=3) #Todo: rowgap?
 import_button, wall_button, collision_button, export_metrics_button =
 	data_controls[1:2, 1:2] = [
 		Button(fig; label=l, halign=:left) for
@@ -133,7 +172,12 @@ import_button, wall_button, collision_button, export_metrics_button =
 
 on(import_button.clicks) do c
 	tracking_path = pick_file(; filterlist="npy")
-	tracking_path != "" && (data[] = analyse_tracking(tracking_path))
+	if tracking_path != ""
+		data[] = analyse_tracking(tracking_path)
+		discrete_palette[] = distinguishable_colors(
+			size(data[].robots, 1), RGB.(Makie.wong_colors())
+		)
+	end
 	autolimits!(metric_axes[1])
 	limits!(
 		swarm_animation,
@@ -142,7 +186,7 @@ on(import_button.clicks) do c
 		minimum(data[].robots[:, Z, :]) - 100,
 		maximum(data[].robots[:, Z, :]) + 100,
 	)
-	set_close_to!(time_slider.sliders[1], 1)
+	set_close_to!(time_slider, 1)
 end
 
 on(wall_button.clicks) do c
@@ -225,15 +269,15 @@ metric_menus = [
 	) for (i, default) in enumerate(["Polarisation", "Rotational Order", "Diameter"]) #TODO remove defaults after debugging
 ]
 # Make coordinates and rotation responsive to the time slider
-x, y, r = [@lift $data.robots[:, i, $(time_slider.sliders[1].value)] for i in [X, Z, θ]]
+x, y, r = [@lift $data.robots[:, i, $(time_slider.value)] for i in [X, Z, θ]]
 
 # make color of robots dependent on clustering
 c = @lift (
-	if !$(animation_toggles[1].active)
+	if !$(robot_toggles[2].active)
 		repeat([RGBA(0, 0, 0, 1)], size($data.robots, 1))
 	else
-		Makie.wong_colors()[collect(
-			cutree($data.clustering[$(time_slider.sliders[1].value)]; k=3)
+		$discrete_palette[collect(
+			cutree($data.clustering[$(time_slider.value)]; h=$(threshold_slider.value))
 		)]
 	end
 )
@@ -242,36 +286,25 @@ c = @lift (
 g = @lift ( #TODO: refactor
 	if size($agent_collisions, 1) != size($data.robots, 1) ||
 		size($wall_collisions, 1) != size($data.robots, 1) ||
-		!$(animation_toggles[2].active)
+		!$(robot_toggles[1].active)
 		repeat([RGBA(0, 0, 0, 0)], size($data.robots, 1))
 	else
 		[
-			if checkbounds(Bool, $agent_collisions, 1, $(time_slider.sliders[1].value)) &&
-				any(
+			if checkbounds(Bool, $agent_collisions, 1, $(time_slider.value)) && any(
 				$agent_collisions[
 					i,
-					max(
-						(
-							$(time_slider.sliders[1].value) -
-							animation_settings.sliders[2].value[]
-						),
-						1,
-					):($(time_slider.sliders[1].value)),
+					max(($(time_slider.value) - animation_settings.sliders[2].value[]), 1):($(
+						time_slider.value
+					)),
 				],
 			)
 				Makie.wong_colors()[6]
-			elseif checkbounds(
-				Bool, $wall_collisions, 1, $(time_slider.sliders[1].value)
-			) && any(
+			elseif checkbounds(Bool, $wall_collisions, 1, $(time_slider.value)) && any(
 				$wall_collisions[
 					i,
-					max(
-						(
-							$(time_slider.sliders[1].value) -
-							animation_settings.sliders[2].value[]
-						),
-						1,
-					):($(time_slider.sliders[1].value)),
+					max(($(time_slider.value) - animation_settings.sliders[2].value[]), 1):($(
+						time_slider.value
+					)),
 				],
 			)
 				Makie.wong_colors()[7]
@@ -313,24 +346,24 @@ poly!(
 # plot the surrounding polygon and connect to toggle
 surrounding_polygon = poly!(
 	swarm_animation,
-	@lift Point2f.($data.derived["Convex Hull"][$(time_slider.sliders[1].value)]);
+	@lift Point2f.($data.derived["Convex Hull"][$(time_slider.value)]);
 	color=:transparent,
 	strokecolor="#8f8f8f",
 	strokewidth=1,
 	linestyle=:dash,
 	closed=true,
 )
-connect!(surrounding_polygon.visible, animation_toggles[3].active)
+connect!(surrounding_polygon.visible, animation_toggles[1].active)
 
 # plot the center of mass and connect to toggle
 center_of_mass = scatter!(
 	swarm_animation,
-	@lift Point2f($data.derived["Center of Mass"][$(time_slider.sliders[1].value)]);
+	@lift Point2f($data.derived["Center of Mass"][$(time_slider.value)]);
 	color="#8f8f8f",
 	markersize=12,
 	marker=:xcross,
 )
-connect!(center_of_mass.visible, animation_toggles[4].active)
+connect!(center_of_mass.visible, animation_toggles[2].active)
 
 #plot the diameter and connect to toggle
 diameter = lines!(
@@ -338,9 +371,9 @@ diameter = lines!(
 	@lift Point2f.(
 		eachslice(
 			$data.robots[
-				$data.derived["Furthest Robots"][$(time_slider.sliders[1].value)],
+				$data.derived["Furthest Robots"][$(time_slider.value)],
 				[X, Z],
-				$(time_slider.sliders[1].value),
+				$(time_slider.value),
 			];
 			dims=ROBOTS,
 		)
@@ -348,7 +381,7 @@ diameter = lines!(
 	color="#8f8f8f",
 	linewidth=1,
 )
-connect!(diameter.visible, animation_toggles[5].active)
+connect!(diameter.visible, animation_toggles[3].active)
 
 # plot the metrics when one is chosen from the corresponding menu
 for (i, (menu, axis)) in enumerate(zip(metric_menus, metric_axes))
@@ -389,14 +422,14 @@ collision_plots = [
 	)
 ]
 for p in collision_plots
-	connect!(p.visible, animation_toggles[2].active)
+	connect!(p.visible, robot_toggles[1].active)
 end
 
 # plot timestep markers
 for axis in metric_axes
-	vlines!(axis, time_slider.sliders[1].value; color=:black, linewidth=0.5)
+	vlines!(axis, time_slider.value; color=:black, linewidth=0.5)
 end
 #TODO: add rectangle in collisions plot?
 
 # Display the figure in it’s own window
-display(fig)
+display(fig);
