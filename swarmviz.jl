@@ -144,10 +144,9 @@ robot_controls[1, 1:3] = grid!(
 	default_colgap=15,
 	halign=:left,
 )
-heightrange = @lift round.(
+heightrange = @lift round.(Int,
 	range(
-		(extrema(reduce(vcat, [c.heights for c in $data.clustering])) .+ (-10, 10))...,
-		3000,
+		(extrema(reduce(vcat, [c.heights for c in $data.clustering])) .+ (-10, 10))..., 3000
 	)
 )
 threshold = Slider(
@@ -178,7 +177,8 @@ end
 data_controls = GridLayout(controls[1, 5]; default_rowgap=6, default_colgap=6)
 import_button, wall_button, collision_button, export_metrics_button =
 	data_controls[1:2, 1:2] = [
-		Button(fig; label=l, halign=:left, width=w, height=27, font=:ui_font) for (l, w) in zip(
+		Button(fig; label=l, halign=:left, width=w, height=27, font=:ui_font) for
+		(l, w) in zip(
 			["Import Tracking", "Import Wall", "Import Collisions", "Export All"],
 			[120, 90, 120, 90],
 		)
@@ -328,16 +328,17 @@ g = @lift ( #TODO: refactor
 # Plot the robot swarm
 #TODO: move center to center of mass
 robot_marker = Makie.Polygon(Point2f[(-1, -1), (0, 0), (-1, 1), (2, 0)])
+marker_scale = (@lift round(Int, 20 / sqrt(size($data.robots, 1))))
 scatter!(
 	swarm_animation,
 	x,
 	y;
 	marker=robot_marker,
-	markersize=6,
+	markersize=marker_scale,
 	rotations=r,
 	color=c,
 	glowcolor=g,
-	glowwidth=6,
+	glowwidth=marker_scale,
 )
 
 # Plot the wall of the enclosure
