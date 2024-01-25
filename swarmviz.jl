@@ -9,6 +9,7 @@ using LinearAlgebra
 using NativeFileDialog
 using NPZ
 using Parquet2
+using RelocatableFolders
 using Statistics
 
 const ROBOTS = 1
@@ -22,6 +23,7 @@ const HVZ = 7
 const ACCX = 11
 const ACCZ = 12
 const TRACKING_DIM = 5
+const FONTFOLDER = RelocatableFolders.@path joinpath(@__DIR__, "assets")
 
 include("src/metrics.jl")
 include("src/plotstyle.jl")
@@ -67,13 +69,19 @@ discrete_palette[] = distinguishable_colors(
 
 # Set up the figure
 GLMakie.activate!(; title="SwarmViz")
-fig = Figure(; size=(960, 600))
+fig = Figure(;
+	size=(960, 600),
+	fonts=(;
+		regular=joinpath(FONTFOLDER, "fira_sans_font", "FiraSans-Medium.ttf"),
+		ui_font=joinpath(FONTFOLDER, "ubuntu_font", "Ubuntu-Regular.ttf"),
+		ui_font_bold=joinpath(FONTFOLDER, "ubuntu_font", "Ubuntu-Bold.ttf"),
+	),
+)
 
 swarm_animation = Axis(
 	fig[1, 1]; xlabel="X", ylabel="Z", autolimitaspect=1, alignmode=Outside()
 )
-metrics_grid = GridLayout(fig[1, 2])
-#TODO: use space on the left somehow?
+metrics_grid = GridLayout(fig[1, 2]; alignmode=Outside())
 time_grid = GridLayout(fig[2, 1:2])
 controls = GridLayout(fig[3, 1:2])
 
@@ -81,65 +89,73 @@ controls = GridLayout(fig[3, 1:2])
 colsize!(fig.layout, 1, Relative(0.5))
 colsize!(fig.layout, 2, Relative(0.5))
 
-Label(time_grid[1, 1]; text="Timestep", halign=:left)
-time_slider = Slider(time_grid[1, 2]; range=timesteps, startvalue=1)
-Label(time_grid[1, 3], @lift string($(time_slider.value)); halign=:right)
+Label(time_grid[1, 1]; text="Timestep", halign=:left, font=:ui_font)
+timestep = Slider(time_grid[1, 2]; range=timesteps, startvalue=1)
+Label(time_grid[1, 3], @lift string($(timestep.value)); halign=:right, font=:ui_font)
+# TODO: test text input for time
 # on(timestep_text.stored_string) do s
-# 	time_slider.value[] = parse(Int64, s)
+# 	timestep.value[] = parse(Int64, s)
 # end
-# on(time_slider.value) do v
+# on(timestep.value) do v
 # 	timestep_text.stored_string.val = string(v)
 # end
 
 # create play/pause button with reactive label
-play_button_text = @lift $isplaying[] ? "Pause" : "Play"
-play_button = Button(controls[1, 1]; label=play_button_text, width=60, height=60)
+play_button_text = @lift $isplaying[] ? "PAUSE" : "PLAY"
+play_button = Button(
+	controls[1, 1]; label=play_button_text, width=60, height=60, font=:ui_font_bold
+)
 
-animation_settings = SliderGrid(
-	controls[1, 2],
-	(label="FPS", range=1:1:120, startvalue=30),
-	(label="Skip", range=0:1:99, startvalue=0),
+animation_setting_grid = GridLayout(controls[1, 2])
+fps = Slider(animation_setting_grid[1, 2]; range=1:1:120, startvalue=30)
+Label(animation_setting_grid[1, 1], "FPS"; halign=:left, font=:ui_font)
+Label(
+	animation_setting_grid[1, 3], @lift string($(fps.value)); halign=:right, font=:ui_font
+)
+skip = Slider(animation_setting_grid[2, 2]; range=0:1:99, startvalue=0)
+Label(animation_setting_grid[2, 1], "Skip"; halign=:left, font=:ui_font)
+Label(
+	animation_setting_grid[2, 3], @lift string($(skip.value)); halign=:right, font=:ui_font
 )
 colsize!(controls, 2, Relative(0.25))
+
 animation_toggles = [Toggle(fig) for _ in 1:3]
 controls[1, 3] = grid!(
 	hcat(
-		[Label(fig, l; halign=:left) for l in ["Polygon", "CoM", "Diameter"]],
+		[
+			Label(fig, l; halign=:left, font=:ui_font) for
+			l in ["Convex Hull", "Center", "Diameter"]
+		],
 		animation_toggles,
 	);
 	default_rowgap=3,
 	default_colgap=6,
 	tellheight=true,
 )
+
 robot_controls = GridLayout(controls[1, 4]; default_rowgap=3)
-colsize!(controls, 4, Auto())
 robot_toggles = [Toggle(fig) for _ in 1:2]
 robot_controls[1, 1:3] = grid!(
 	hcat(
-		[Label(fig, l; halign=:left) for l in ["Collisions", "Clustering"]], robot_toggles
+		[Label(fig, l; halign=:left, font=:ui_font) for l in ["Collisions", "Clustering"]],
+		robot_toggles,
 	);
 	default_rowgap=3,
 	default_colgap=15,
 	halign=:left,
 )
-Label(robot_controls[2, 1], "Threshold"; halign=:left)
-threshold_slider = Slider(
-	robot_controls[2, 2];
-	range=(@lift round.(
-		range(
-			(extrema(reduce(vcat, [c.heights for c in $data.clustering])) .+ (-1, 1))...,
-			1000,
-		)
-	)),
-	startvalue=(@lift median(
-		range(
-			(extrema(reduce(vcat, [c.heights for c in $data.clustering])) .+ (-1, 1))...,
-			1000,
-		),
-	)),
-	# width=150,
+heightrange = @lift round.(
+	range(
+		(extrema(reduce(vcat, [c.heights for c in $data.clustering])) .+ (-10, 10))...,
+		3000,
+	)
 )
-Label(robot_controls[2, 3], @lift string($(threshold_slider.value)); halign=:right)
+threshold = Slider(
+	robot_controls[2, 2]; range=heightrange, startvalue=(@lift median($heightrange))
+)
+Label(robot_controls[2, 1], "Threshold"; halign=:left, font=:ui_font)
+Label(robot_controls[2, 3], @lift string($(threshold.value)); halign=:right, font=:ui_font)
+colsize!(controls, 4, Auto())
 
 # start animation loop on buttonpress, the plot then automatically updates
 # as it’s dependent on the time slider
@@ -147,27 +163,25 @@ on(play_button.clicks) do c
 	isplaying[] = !isplaying[]
 end
 on(play_button.clicks) do c
-	@async while isplaying[] &&
-				 time_slider.value[] <
-				 n_timesteps[] - animation_settings.sliders[2].value[] - 1
+	@async while isplaying[] && timestep.value[] < n_timesteps[] - skip.value[] - 1
 		frame_start = time()
-		set_close_to!(
-			time_slider, time_slider.value[] + 1 + animation_settings.sliders[2].value[]
-		)
-		sleep(max(1 / animation_settings.sliders[1].value[] - time() + frame_start, 0))
+		set_close_to!(timestep, timestep.value[] + 1 + skip.value[])
+		sleep(max(1 / fps.value[] - time() + frame_start, 0))
 		isopen(fig.scene) || break # ensures computations stop if window is closed
-		if time_slider.value[] >= n_timesteps[] - animation_settings.sliders[2].value[] - 1
+		if timestep.value[] >= n_timesteps[] - skip.value[] - 1
 			isplaying[] = !isplaying[]
 		end
 	end
 end
 
 # create buttons to import/export data
-data_controls = GridLayout(controls[1, 5]; default_rowgap=3, default_colgap=3) #Todo: rowgap?
+data_controls = GridLayout(controls[1, 5]; default_rowgap=6, default_colgap=6)
 import_button, wall_button, collision_button, export_metrics_button =
 	data_controls[1:2, 1:2] = [
-		Button(fig; label=l, halign=:left) for
-		l in ["Import Tracking", "Import Wall", "Import Collisions", "Export All"]
+		Button(fig; label=l, halign=:left, width=w, height=27, font=:ui_font) for (l, w) in zip(
+			["Import Tracking", "Import Wall", "Import Collisions", "Export All"],
+			[120, 90, 120, 90],
+		)
 	]
 
 on(import_button.clicks) do c
@@ -186,7 +200,7 @@ on(import_button.clicks) do c
 		minimum(data[].robots[:, Z, :]) - 100,
 		maximum(data[].robots[:, Z, :]) + 100,
 	)
-	set_close_to!(time_slider, 1)
+	set_close_to!(timestep, 1)
 end
 
 on(wall_button.clicks) do c
@@ -262,14 +276,16 @@ metric_menus = [
 		metrics_grid[i, 1, Top()];
 		options=metrics_tuples,
 		default=default,
-		width=150,
-		height=18,
-		halign=:center,
+		width=150, #TODO: adapt length to max length of final metric selection
+		height=24,
+		halign=:left,
+		selection_cell_color_inactive=:transparent,
+		textcolor="#8f8f8f",
 		prompt="Select Metric...",
 	) for (i, default) in enumerate(["Polarisation", "Rotational Order", "Diameter"]) #TODO remove defaults after debugging
 ]
 # Make coordinates and rotation responsive to the time slider
-x, y, r = [@lift $data.robots[:, i, $(time_slider.value)] for i in [X, Z, θ]]
+x, y, r = [@lift $data.robots[:, i, $(timestep.value)] for i in [X, Z, θ]]
 
 # make color of robots dependent on clustering
 c = @lift (
@@ -277,7 +293,7 @@ c = @lift (
 		repeat([RGBA(0, 0, 0, 1)], size($data.robots, 1))
 	else
 		$discrete_palette[collect(
-			cutree($data.clustering[$(time_slider.value)]; h=$(threshold_slider.value))
+			cutree($data.clustering[$(timestep.value)]; h=$(threshold.value))
 		)]
 	end
 )
@@ -290,21 +306,15 @@ g = @lift ( #TODO: refactor
 		repeat([RGBA(0, 0, 0, 0)], size($data.robots, 1))
 	else
 		[
-			if checkbounds(Bool, $agent_collisions, 1, $(time_slider.value)) && any(
+			if checkbounds(Bool, $agent_collisions, 1, $(timestep.value)) && any(
 				$agent_collisions[
-					i,
-					max(($(time_slider.value) - animation_settings.sliders[2].value[]), 1):($(
-						time_slider.value
-					)),
+					i, max(($(timestep.value) - skip.value[]), 1):($(timestep.value))
 				],
 			)
 				Makie.wong_colors()[6]
-			elseif checkbounds(Bool, $wall_collisions, 1, $(time_slider.value)) && any(
+			elseif checkbounds(Bool, $wall_collisions, 1, $(timestep.value)) && any(
 				$wall_collisions[
-					i,
-					max(($(time_slider.value) - animation_settings.sliders[2].value[]), 1):($(
-						time_slider.value
-					)),
+					i, max(($(timestep.value) - skip.value[]), 1):($(timestep.value))
 				],
 			)
 				Makie.wong_colors()[7]
@@ -346,7 +356,7 @@ poly!(
 # plot the surrounding polygon and connect to toggle
 surrounding_polygon = poly!(
 	swarm_animation,
-	@lift Point2f.($data.derived["Convex Hull"][$(time_slider.value)]);
+	@lift Point2f.($data.derived["Convex Hull"][$(timestep.value)]);
 	color=:transparent,
 	strokecolor="#8f8f8f",
 	strokewidth=1,
@@ -358,7 +368,7 @@ connect!(surrounding_polygon.visible, animation_toggles[1].active)
 # plot the center of mass and connect to toggle
 center_of_mass = scatter!(
 	swarm_animation,
-	@lift Point2f($data.derived["Center of Mass"][$(time_slider.value)]);
+	@lift Point2f($data.derived["Center of Mass"][$(timestep.value)]);
 	color="#8f8f8f",
 	markersize=12,
 	marker=:xcross,
@@ -371,9 +381,9 @@ diameter = lines!(
 	@lift Point2f.(
 		eachslice(
 			$data.robots[
-				$data.derived["Furthest Robots"][$(time_slider.value)],
+				$data.derived["Furthest Robots"][$(timestep.value)],
 				[X, Z],
-				$(time_slider.value),
+				$(timestep.value),
 			];
 			dims=ROBOTS,
 		)
@@ -427,9 +437,10 @@ end
 
 # plot timestep markers
 for axis in metric_axes
-	vlines!(axis, time_slider.value; color=:black, linewidth=0.5)
+	vlines!(axis, timestep.value; color=:black, linewidth=0.5)
 end
 #TODO: add rectangle in collisions plot?
 
 # Display the figure in it’s own window
+
 display(fig);
