@@ -86,6 +86,7 @@ function analyse_tracking(filename)
 	# ]
 
 	clusterings = hclust.(distmats, branchorder=:barjoseph)
+	cluster_thresholds = reduce(hcat, [sort(c.heights) for c in clusterings])
 
 	metrics = Dict(
 		"Polarisation" => polarisation,
@@ -95,7 +96,7 @@ function analyse_tracking(filename)
 		"Area" => area,
 		"Roundness" => roundness,
 		"Max Min IID" => maxmindist,
-		# "Acceleration Correlation" => acceleration_correlation,
+		"Cluster Thresholds" => cluster_thresholds,
 	)
 	derived = Dict( #TODO: rename
 		"Convex Hull" => surrounding_polygon,

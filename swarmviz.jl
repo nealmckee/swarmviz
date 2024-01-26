@@ -36,7 +36,7 @@ struct SwarmData
 	"robots x properties x timesteps"
 	robots::Array{Float64,3}
 	"metric name => vector with metric values for each timestep"
-	metrics::Dict{String,Vector{Float64}}
+	metrics::Dict{String,Union{Vector{Float64},Matrix{Float64}}}
 	"name => vector with derived ata for each timestep"
 	derived::Dict{String,Any}
 	"one clustering per timesteps"
@@ -106,7 +106,7 @@ play_button = Button(
 	controls[1, 1]; label=play_button_text, width=60, height=60, font=:ui_font_bold
 )
 
-animation_setting_grid = GridLayout(controls[1, 2], default_rowgap = 6)
+animation_setting_grid = GridLayout(controls[1, 2]; default_rowgap=6)
 fps = Slider(animation_setting_grid[1, 2]; range=1:1:120, startvalue=30)
 Label(animation_setting_grid[1, 1], "FPS"; halign=:left, font=:ui_font)
 Label(
@@ -155,6 +155,19 @@ Label(robot_controls[2, 1], "Threshold"; halign=:left, font=:ui_font)
 Label(robot_controls[2, 3], @lift string($(threshold.value)); halign=:right, font=:ui_font)
 colsize!(controls, 4, Auto())
 
+# on(threshold.value) do v # TODO remove after feedback
+# 	_mean_clustersize = [
+# 		mean(values(countmap(cutree(c; h=v)))) for c in data[].clustering
+# 	]
+# 	# idcs = findall(m -> m.i_selected[] == 8, metric_menus)
+# 	# for (i, menu, axis) in zip(idcs, metric_menus[idcs], metric_axes[idcs])
+# 	# 	empty!(axis)
+#     #     lines!(axis, _mean_clustersize; linewidth=1, color=Makie.wong_colors()[i])
+#     #     autolimits!(axis)
+#     #     vlines!(axis, timestep.value; color=:black, linewidth=0.5)
+# 	# end
+# end
+
 # start animation loop on buttonpress, the plot then automatically updates
 # as it’s dependent on the time slider
 on(play_button.clicks) do c
@@ -187,8 +200,9 @@ on(import_button.clicks) do c
 	tracking_path = pick_file(; filterlist="npy")
 	if tracking_path != ""
 		data[] = analyse_tracking(tracking_path)
-		discrete_palette[] = distinguishable_colors(
-			size(data[].robots, 1), RGB.(Makie.wong_colors())
+		discrete_palette[] = distinguishable_colors( # TODO: add black and white to seed
+			size(data[].robots, 1),
+			RGB.(Makie.wong_colors()),
 		)
 	end
 	autolimits!(metric_axes[1])
@@ -256,7 +270,13 @@ on(export_metrics_button.clicks) do c
 end
 
 # axes to hold the metric plots
-metric_axes = [Axis(metrics_grid[row, 1]; xticklabelsvisible=false) for row in 1:3]
+metric_axes = [
+	Axis(
+		metrics_grid[row, 1];
+		xticklabelsvisible=false,
+		palette=(patchcolor=collect(cgrad(:batlow, 9; categorical=true)),),
+	) for row in 1:3
+]
 collisions_axis = Axis(
 	metrics_grid[4, 1];
 	xlabel="Timestep",
@@ -269,11 +289,11 @@ collisions_axis = Axis(
 linkxaxes!(metric_axes..., collisions_axis)
 
 # menus to select which metrics to plot (inside the metric axes)
-metrics_tuples = @lift Tuple.(collect($data.metrics))
+metric_tuples = @lift Tuple.(collect($data.metrics))
 metric_menus = [
 	Menu(
 		metrics_grid[i, 1, Top()];
-		options=metrics_tuples,
+		options=metric_tuples,
 		default=default,
 		width=150, #TODO: adapt length to max length of final metric selection
 		height=24,
@@ -405,12 +425,46 @@ for (i, (menu, axis)) in enumerate(zip(metric_menus, metric_axes))
 			)
 		end
 		if !isnothing(s)
-			lines!(axis, s; linewidth=1, color=Makie.wong_colors()[i])
-			limits!(
-				axis,
-				(nothing, nothing),
-				maximum(s) <= 1 && minimum(s) >= 0 ? (0, 1) : (nothing, nothing),
-			)
+			if ndims(s) == 1
+				lines!(axis, s; linewidth=1, color=Makie.wong_colors()[i], depth=1)
+				limits!(
+					axis,
+					(nothing, nothing),
+					maximum(s) <= 1 && minimum(s) >= 0 ? (0, 1) : (nothing, nothing),
+				)
+			else
+				stride = 30
+				transform = log
+				for j in 1:(size(s, 1) + 1)
+					band!(
+						axis,
+						(@lift 1:stride:($n_timesteps)),
+						(@lift if j == 1
+							transform.(
+								fill(minimum(s[:, 1:stride:end]), $n_timesteps ÷ stride + 1)
+							)
+						else
+							transform.(s[j, 1:stride:end])
+						end),
+						(@lift if j == (size(s, 1) + 1)
+							transform.(s[j, 1:stride:end])
+						else
+							transform.(
+								fill(maximum(s[:, 1:stride:end]), $n_timesteps ÷ stride + 1)
+							)
+						end);
+						linewidth=1,
+						depth_shift=-10000000,
+					)
+				end
+				hlines!(
+					axis,
+					(@lift log($(threshold.value)));
+					linewidth=0.5,
+					color=:black,
+					depth_shift=1000,
+				)
+			end
 		end
 	end
 	notify(menu.selection) #TODO remove after debugging
@@ -437,7 +491,7 @@ end
 
 # plot timestep markers
 for axis in metric_axes
-	vlines!(axis, timestep.value; color=:black, linewidth=0.5)
+	vlines!(axis, timestep.value; color=:black, linewidth=0.5, depth_shift=1000)
 end
 #TODO: add rectangle in collisions plot?
 
