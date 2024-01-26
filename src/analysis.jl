@@ -1,5 +1,6 @@
 import LazySets: convex_hull
 using Clustering
+import StatsBase: countmap
 
 function analyse_tracking(filename)
 	# Load the data and drop singular dimensions
@@ -86,7 +87,7 @@ function analyse_tracking(filename)
 	# ]
 
 	clusterings = hclust.(distmats, branchorder=:barjoseph)
-	cluster_thresholds = reduce(hcat, [sort(c.heights) for c in clusterings])
+	single_cluster_thresholds = [maximum(c.heights) for c in clusterings]
 
 	metrics = Dict(
 		"Polarisation" => polarisation,
@@ -96,7 +97,7 @@ function analyse_tracking(filename)
 		"Area" => area,
 		"Roundness" => roundness,
 		"Max Min IID" => maxmindist,
-		"Cluster Thresholds" => cluster_thresholds,
+		"Single Cluster Threshold" => single_cluster_thresholds,
 	)
 	derived = Dict( #TODO: rename
 		"Convex Hull" => surrounding_polygon,

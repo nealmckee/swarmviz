@@ -36,7 +36,7 @@ struct SwarmData
 	"robots x properties x timesteps"
 	robots::Array{Float64,3}
 	"metric name => vector with metric values for each timestep"
-	metrics::Dict{String,Union{Vector{Float64},Matrix{Float64}}}
+	metrics::Dict{String,Vector{Float64}}
 	"name => vector with derived ata for each timestep"
 	derived::Dict{String,Any}
 	"one clustering per timesteps"
@@ -270,13 +270,7 @@ on(export_metrics_button.clicks) do c
 end
 
 # axes to hold the metric plots
-metric_axes = [
-	Axis(
-		metrics_grid[row, 1];
-		xticklabelsvisible=false,
-		palette=(patchcolor=collect(cgrad(:batlow, 9; categorical=true)),),
-	) for row in 1:3
-]
+metric_axes = [Axis(metrics_grid[row, 1]; xticklabelsvisible=false) for row in 1:3]
 collisions_axis = Axis(
 	metrics_grid[4, 1];
 	xlabel="Timestep",
@@ -425,46 +419,12 @@ for (i, (menu, axis)) in enumerate(zip(metric_menus, metric_axes))
 			)
 		end
 		if !isnothing(s)
-			if ndims(s) == 1
-				lines!(axis, s; linewidth=1, color=Makie.wong_colors()[i], depth=1)
-				limits!(
-					axis,
-					(nothing, nothing),
-					maximum(s) <= 1 && minimum(s) >= 0 ? (0, 1) : (nothing, nothing),
-				)
-			else
-				stride = 30
-				transform = log
-				for j in 1:(size(s, 1) + 1)
-					band!(
-						axis,
-						(@lift 1:stride:($n_timesteps)),
-						(@lift if j == 1
-							transform.(
-								fill(minimum(s[:, 1:stride:end]), $n_timesteps ÷ stride + 1)
-							)
-						else
-							transform.(s[j, 1:stride:end])
-						end),
-						(@lift if j == (size(s, 1) + 1)
-							transform.(s[j, 1:stride:end])
-						else
-							transform.(
-								fill(maximum(s[:, 1:stride:end]), $n_timesteps ÷ stride + 1)
-							)
-						end);
-						linewidth=1,
-						depth_shift=-10000000,
-					)
-				end
-				hlines!(
-					axis,
-					(@lift log($(threshold.value)));
-					linewidth=0.5,
-					color=:black,
-					depth_shift=1000,
-				)
-			end
+			lines!(axis, s; linewidth=1, color=Makie.wong_colors()[i])
+			limits!(
+				axis,
+				(nothing, nothing),
+				maximum(s) <= 1 && minimum(s) >= 0 ? (0, 1) : (nothing, nothing),
+			)
 		end
 	end
 	notify(menu.selection) #TODO remove after debugging
@@ -491,7 +451,7 @@ end
 
 # plot timestep markers
 for axis in metric_axes
-	vlines!(axis, timestep.value; color=:black, linewidth=0.5, depth_shift=1000)
+	vlines!(axis, timestep.value; color=:black, linewidth=0.5)
 end
 #TODO: add rectangle in collisions plot?
 
