@@ -1,6 +1,5 @@
 import LazySets: convex_hull
 using Clustering
-import StatsBase: countmap
 
 function analyse_tracking(filename)
 	# Load the data and drop singular dimensions
