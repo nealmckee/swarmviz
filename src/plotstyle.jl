@@ -1,3 +1,12 @@
+PALETTE = [
+	colorant"#6f4fc6",
+	colorant"#ffbb00",
+	colorant"#00a789",
+	colorant"#d35564",
+	colorant"#9799ff",
+	colorant"#4b6500",
+]
+
 set_aog_theme!()
 update_theme!(;
 	colormap=:batlow,
