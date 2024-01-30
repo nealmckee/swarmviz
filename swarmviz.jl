@@ -14,7 +14,8 @@ using Statistics
 
 const ROBOTS = 1
 const PROPERTIES = 2
-const T = 3
+const TIME = 3
+const T = 1
 const X = 2
 const Z = 4
 const θ = 5
@@ -49,10 +50,10 @@ data = Observable(SwarmData(zeros(1, TRACKING_DIM + 10, 1), Dict(), Dict(), []))
 wall_data = Observable(zeros(2, 1))
 wall_collisions = Observable(falses(1, 1))
 agent_collisions = Observable(falses(1, 1))
-n_timesteps = @lift size($data.robots, T)
+n_timesteps = @lift size($data.robots, TIME)
 timesteps = @lift 1:($n_timesteps)
 isplaying = Observable(false)
-discrete_palette = Observable(Makie.wong_colors())
+discrete_palette = Observable(PALETTE)
 
 # Preload data for easier debugging #TODO: remove when done
 tracking_path = "data/A0_09_B0_0/EXP1_A0_09_B0_0_r1_w3_summaryd.npy"
@@ -63,8 +64,14 @@ wall_data[] = analyse_wall(wall_path)
 data[] = analyse_tracking(tracking_path)
 wall_collisions[] = process_collisions(wall_collisons_path)
 agent_collisions[] = process_collisions(agent_collisons_path)
-discrete_palette[] = distinguishable_colors(
-	size(data[].robots, 1), RGB.(Makie.wong_colors())
+discrete_palette[] = vcat(
+	RGB.(PALETTE),
+	distinguishable_colors(
+		size(data[].robots, 1) - length(PALETTE),
+		vcat(RGB.(PALETTE), [RGB(0, 0, 0), RGB(1, 1, 1)]);
+		dropseed=true,
+		lchoices=range(45, 90; length=15),
+	),
 )
 
 # Set up the figure
@@ -200,9 +207,14 @@ on(import_button.clicks) do c
 	tracking_path = pick_file(; filterlist="npy")
 	if tracking_path != ""
 		data[] = analyse_tracking(tracking_path)
-		discrete_palette[] = distinguishable_colors( # TODO: add black and white to seed
-			size(data[].robots, 1),
-			RGB.(Makie.wong_colors()),
+		discrete_palette[] = vcat(
+			RGB.(PALETTE),
+			distinguishable_colors(
+				size(data[].robots, 1) - length(PALETTE),
+				vcat(RGB.(PALETTE), [RGB(0, 0, 0), RGB(1, 1, 1)]);
+				dropseed=true,
+				lchoices=range(45, 90; length=15),
+			),
 		)
 	end
 	autolimits!(metric_axes[1])
@@ -260,13 +272,17 @@ on(export_metrics_button.clicks) do c
 		],
 	)
 	robots_df.robot_id = repeat(1:size(data[].robots, 1); inner=size(data[].robots, 3))
-	Parquet2.writefile("robots.parquet", robots_df)
-	Parquet2.writefile("metrics.parquet", DataFrame(data[].metrics))
+	robots_df.cluster = reduce(vcat, cutree.(data[].clustering; h=threshold.value[]))
+	Parquet2.writefile(joinpath(export_folder, "robots.parquet"), robots_df)
+	Parquet2.writefile(
+		joinpath(export_folder, "metrics.parquet"), DataFrame(data[].metrics)
+	)
 	distance_matrices = stack(data[].derived["Distance Matrices"])
 	furthest_robots = stack(data[].derived["Furthest Robots"])
 	center_of_mass = stack(data[].derived["Center of Mass"])
-	JLD2.@save "derived.jld2" distance_matrices furthest_robots center_of_mass
-	JSON3.write("convex_hull.json", data[].derived["Convex Hull"])
+    chosen_clustering_threshold = threshold.value[]
+	JLD2.@save joinpath(export_folder, "derived.jld2") distance_matrices furthest_robots center_of_mass chosen_clustering_threshold
+	JSON3.write(joinpath(export_folder, "convex_hull.json"), data[].derived["Convex Hull"])
 end
 
 # axes to hold the metric plots
@@ -324,13 +340,13 @@ g = @lift ( #TODO: refactor
 					i, max(($(timestep.value) - skip.value[]), 1):($(timestep.value))
 				],
 			)
-				Makie.wong_colors()[6]
+				PALETTE[5]
 			elseif checkbounds(Bool, $wall_collisions, 1, $(timestep.value)) && any(
 				$wall_collisions[
 					i, max(($(timestep.value) - skip.value[]), 1):($(timestep.value))
 				],
 			)
-				Makie.wong_colors()[7]
+				PALETTE[4]
 			else
 				RGBA(0, 0, 0, 0)
 			end for i in 1:size($wall_collisions, 1)
@@ -419,7 +435,7 @@ for (i, (menu, axis)) in enumerate(zip(metric_menus, metric_axes))
 			)
 		end
 		if !isnothing(s)
-			lines!(axis, s; linewidth=1, color=Makie.wong_colors()[i])
+			lines!(axis, s; linewidth=1, color=PALETTE[i])
 			limits!(
 				axis,
 				(nothing, nothing),
@@ -438,12 +454,8 @@ collision_plots = [
 		color=color,
 		linewidth=1,
 		depth=depth,
-	) for (depth, (obs, color)) in enumerate(
-		zip(
-			[wall_collisions, agent_collisions],
-			[Makie.wong_colors()[7], Makie.wong_colors()[6]],
-		),
-	)
+	) for (depth, (obs, color)) in
+	enumerate(zip([wall_collisions, agent_collisions], [PALETTE[4], PALETTE[5]]))
 ]
 for p in collision_plots
 	connect!(p.visible, robot_toggles[1].active)
