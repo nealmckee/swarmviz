@@ -1,5 +1,16 @@
 import LazySets: convex_hull
 using Clustering
+using DSP
+
+function apply_lowpass(data, cutoff, order, dts)
+	return permutedims(
+		filt(
+			digitalfilter(Lowpass(cutoff; fs=1 ÷ mean(dts)), Butterworth(order)),
+			permutedims(data .- data[:, :, 1], (3, 1, 2)),
+		),
+		(2, 3, 1),
+	) .+ data[:, :, 1]
+end
 
 function analyse_tracking(filename)
 	# Load the data and drop singular dimensions
@@ -12,22 +23,45 @@ function analyse_tracking(filename)
 	robot_data[:, θ, :] = mod2pi.(robot_data[:, θ, :])
 	heading_vector_xs = cos.(robot_data[:, θ:θ, :])
 	heading_vector_zs = sin.(robot_data[:, θ:θ, :])
-	velocity_xs = cat(zeros(n_robots, 1, 1), diff(robot_data[:, X:X, :]; dims=T); dims=T)
-	velocity_zs = cat(zeros(n_robots, 1, 1), diff(robot_data[:, Z:Z, :]; dims=T); dims=T)
+	dts =
+		mean.(eachslice(diff(robot_data[:, T:T, :]; dims=TIME); dims=(ROBOTS, PROPERTIES)))
+	xs_lowpass, zs_lowpass = [
+		apply_lowpass(robot_data[:, i:i, :], 0.16, 1, dts) for i in (X, Z)
+	]
+
+	velocity_xs, velocity_zs = [
+		cat(
+			zeros(n_robots, 1, 1),
+			apply_lowpass(diff(pos_lp; dims=TIME) ./ dts, 0.16, 1, dts);
+			dims=TIME,
+		) for pos_lp in (xs_lowpass, zs_lowpass)
+	]
 	velocity_magnitude = sqrt.(velocity_xs .^ 2 .+ velocity_zs .^ 2)
-	acceleration_xs = cat(diff(velocity_xs; dims=T), zeros(n_robots, 1, 1); dims=T)
-	acceleration_zs = cat(diff(velocity_zs; dims=T), zeros(n_robots, 1, 1); dims=T)
+	acceleration_xs, acceleration_zs = [
+		cat(
+			apply_lowpass(diff(vel_lp; dims=TIME) ./ dts, 0.16, 1, dts),
+			zeros(n_robots, 1, 1);
+			dims=TIME,
+		) for vel_lp in (velocity_xs, velocity_zs)
+	]
 	acceleration_magnitude = sqrt.(acceleration_xs .^ 2 .+ acceleration_zs .^ 2)
-	angular_velocity = cat( #TODO: broken until input is fixed
+	angular_velocity = cat(
 		zeros(n_robots, 1, 1),
-		[ #TODO reshape?
-			abs(d) < 2pi - abs(d) ? d : -sign(d) * (2pi - abs(d)) for
-			d in diff(robot_data[:, θ:θ, :]; dims=T)
-		];
-		dims=T,
+		map(
+			d -> abs(d) < pi ? d : -sign(d) * (2pi - abs(d)),
+			diff(robot_data[:, θ:θ, :]; dims=TIME),
+		) ./ dts;
+		dims=TIME,
+	)
+	angular_velocity_lowpass = permutedims(
+		filt(
+			digitalfilter(Lowpass(0.05; fs=30), Butterworth(1)),
+			permutedims(angular_velocity[1:10, :, :], (3, 1, 2)),
+		),
+		(2, 3, 1),
 	)
 	angular_acceleration = cat(
-		diff(angular_velocity; dims=T), zeros(n_robots, 1, 1); dims=T
+		diff(angular_velocity_lowpass; dims=TIME), zeros(n_robots, 1, 1); dims=TIME
 	)
 
 	robot_data = cat(
@@ -47,20 +81,21 @@ function analyse_tracking(filename)
 
 	# precalculate all metrics for all timesteps (currently no clustering)
 	#TODO: more outsourcing to metrics.jl?
-	polarisation = swarm_polarisation.(eachslice(robot_data; dims=T))
-	rotational_order = swarm_rotational_order.(eachslice(robot_data; dims=T))
+	polarisation = swarm_polarisation.(eachslice(robot_data; dims=TIME))
+	rotational_order = swarm_rotational_order.(eachslice(robot_data; dims=TIME))
 	distmats = [
 		pairwise(Euclidean(), permutedims(s)) for
-		s in eachslice(robot_data[:, [X, Z], :]; dims=T)
+		s in eachslice(robot_data[:, [X, Z], :]; dims=TIME)
 	]
 	mean_interindividual_distance = mean.(distmats) .* (1 .+ 1 ./ (size.(distmats, 1) .- 1))
 	surrounding_polygon =
 		convex_hull.(
 			collect(eachslice(s; dims=ROBOTS)) for
-			s in eachslice(robot_data[:, [X, Z], :]; dims=T)
+			s in eachslice(robot_data[:, [X, Z], :]; dims=TIME)
 		)
 	center_of_mass = [
-		mean(eachslice(s; dims=ROBOTS)) for s in eachslice(robot_data[:, [X, Z], :]; dims=T)
+		mean(eachslice(s; dims=ROBOTS)) for
+		s in eachslice(robot_data[:, [X, Z], :]; dims=TIME)
 	]
 	findmaxdist = [findmax(m) for m in distmats]
 	diameter = [f[1] for f in findmaxdist]
@@ -82,7 +117,7 @@ function analyse_tracking(filename)
 	]
 	# acceleration_correlation = [
 	# 	mean(dot(a, s[j, :]) for (i, a) in enumerate(eachrow(s)) for j in 1:(i - 1)) for
-	# 	s in eachslice(smoothed_acceleration; dims=T)
+	# 	s in eachslice(robot_data[:, [ACCX, ACCZ], :]; dims=TIME)
 	# ]
 
 	clusterings = hclust.(distmats, branchorder=:barjoseph)
@@ -96,7 +131,15 @@ function analyse_tracking(filename)
 		"Area" => area,
 		"Roundness" => roundness,
 		"Max Min IID" => maxmindist,
+		"Correlation of Acceleration" => acceleration_correlation,
 		"Single Cluster Threshold" => single_cluster_thresholds,
+		"X_lowpass" => xs_lowpass[1, 1, :],
+		"VEL" => velocity_xs[1, 1, :],
+		"Acc" => acceleration_xs[1, 1, :],
+		"Angle" => robot_data[1, θ, :],
+		"dAngle" => angular_velocity[1, 1, :],
+		"dAngle_lowpass" => angular_velocity_lowpass[1, 1, :],
+		"ddAngle" => angular_acceleration[1, 1, :],
 	)
 	derived = Dict( #TODO: rename
 		"Convex Hull" => surrounding_polygon,
