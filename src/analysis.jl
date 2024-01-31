@@ -122,6 +122,7 @@ function analyse_tracking(filename)
 
 	clusterings = hclust.(distmats, branchorder=:barjoseph)
 	single_cluster_thresholds = [maximum(c.heights) for c in clusterings]
+    two_cluster_thresholds = [sort(c.heights)[end-1] for c in clusterings]
 
 	metrics = Dict(
 		"Polarisation" => polarisation,
@@ -132,7 +133,8 @@ function analyse_tracking(filename)
 		"Roundness" => roundness,
 		"Max Min IID" => maxmindist,
 		"Correlation of Acceleration" => acceleration_correlation,
-		"Single Cluster Threshold" => single_cluster_thresholds,
+		"1 to 2 Clusters Threshold" => single_cluster_thresholds,
+        "2 to 3 Clusters Threshold" => two_cluster_thresholds,
 		"X_lowpass" => xs_lowpass[1, 1, :],
 		"VEL" => velocity_xs[1, 1, :],
 		"Acc" => acceleration_xs[1, 1, :],
