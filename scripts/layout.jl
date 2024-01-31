@@ -32,6 +32,7 @@ colsize!(figure.layout, 2, Relative(0.5))
 timestep = Slider(time_grid[1, 2]; range=timesteps, startvalue=1)
 Label(time_grid[1, 1]; text="Timestep", halign=:left, font=:ui_font)
 Label(time_grid[1, 3], @lift string($(timestep.value)); halign=:right, font=:ui_font)
+#TODO add textbox to enter specific value?
 
 # CONTROLS
 
@@ -98,6 +99,7 @@ threshold = Slider(
 )
 Label(robot_controls[2, 1], "Threshold"; halign=:left, font=:ui_font)
 Label(robot_controls[2, 3], @lift string($(threshold.value)); halign=:right, font=:ui_font)
+# TODO add texbox above to enter specific value?
 # make this column resize with the window and take up all remaining available space
 colsize!(controls, 4, Auto())
 
