@@ -96,7 +96,7 @@ heightrange = @lift round.(
 )
 threshold = Slider(
 	robot_controls[2, 2]; range=heightrange, startvalue=(@lift median($heightrange))
-)
+) #TODO: fixed choice of range after deciding on dissimilarity measure
 Label(robot_controls[2, 1], "Threshold"; halign=:left, font=:ui_font)
 Label(robot_controls[2, 3], @lift string($(threshold.value)); halign=:right, font=:ui_font)
 # TODO add texbox above to enter specific value?
