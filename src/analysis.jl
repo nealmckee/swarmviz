@@ -115,10 +115,10 @@ function analyse_tracking(filename)
 		4pi * A / sum(colwise(Euclidean(), stack(p), stack(vcat(p[2:end], [p[1]]))))^2 for
 		(p, A) in zip(surrounding_polygon, area)
 	]
-	# acceleration_correlation = [
-	# 	mean(dot(a, s[j, :]) for (i, a) in enumerate(eachrow(s)) for j in 1:(i - 1)) for
-	# 	s in eachslice(robot_data[:, [ACCX, ACCZ], :]; dims=TIME)
-	# ]
+	acceleration_correlation = [
+		mean(dot(a, s[j, :]) for (i, a) in enumerate(eachrow(s)) for j in 1:(i - 1)) for
+		s in eachslice(robot_data[:, [ACCX, ACCZ], :]; dims=TIME)
+	]
 
 	clusterings = hclust.(distmats, branchorder=:barjoseph)
 	single_cluster_thresholds = [maximum(c.heights) for c in clusterings]
