@@ -86,11 +86,27 @@ function analyse_tracking(filename)
 		mean(dot(a, s[j, :]) for (i, a) in enumerate(eachrow(s)) for j in 1:(i - 1)) for
 		s in eachslice(robot_data[:, [ACCX, ACCZ], :]; dims=TIME)
 	]
-	cosine_dist = [
-		pairwise(Cosine(), permutedims(s)) for
-		s in eachslice(robot_data[:, [X, Z], :]; dims=TIME)
+	cosine_dist =
+		(
+			[
+				pairwise(Cosine(), permutedims(s)) for
+				s in eachslice(robot_data[:, [X, Z], :]; dims=TIME)
+			] .+ 1
+		) ./ 2
+	velocity_dist = [
+		[min(v[i] / v[j], v[j] / v[i]) for i in eachindex(v), j in 1:(i - 1)] for
+		v in eachslice(velocity_magnitude; dims=TIME)
 	]
-	clusterings = hclust.(distmats, branchorder=:barjoseph)
+	min_dist = minimum(stack(distmats))
+	visited_diameter = sqrt(
+		sum([reduce(-, extrema(robot_data[:, i, :]))^2 for i in (X, Z)])
+	)
+	clusterings =
+		hclust.(
+			(distmats .- min_dist) ./ (visited_diameter - min_dist) .*
+			(visited_diameter / min_dist) .+ cosine_dist .+ velocity_dist, #TODO add weights
+			branchorder=:barjoseph,
+		)
 	single_cluster_thresholds = [maximum(c.heights) for c in clusterings]
 	two_cluster_thresholds = [sort(c.heights)[end - 1] for c in clusterings]
 
