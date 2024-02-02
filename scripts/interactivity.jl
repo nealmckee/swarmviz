@@ -19,6 +19,13 @@ on(play_button.clicks) do c
 	end
 end
 
+# CONTROLS
+
+# set the threshold to the content of the textbox if it can be parsed to a Float64
+on(manual_threshold.stored_string) do s
+	set_close_to!(threshold, parse(Float64, s))
+end
+
 # IO
 
 on(import_button.clicks) do c

@@ -76,8 +76,9 @@ controls[1, 3] = grid!(
 # toggles to control what is displayed on the robot markers in the animation
 # as well as which threshold is applied to the hierarchical clustering for the coloring
 robot_controls = GridLayout(controls[1, 4]; default_rowgap=3)
+robot_controls_upper = GridLayout(robot_controls[1, 1]; default_rowgap=3)
 robot_toggles = [Toggle(figure) for _ in 1:2]
-robot_controls[1, 1:3] = grid!(
+robot_controls_upper[1, 1] = grid!(
 	hcat(
 		[
 			Label(figure, l; halign=:left, font=:ui_font) for
@@ -89,17 +90,32 @@ robot_controls[1, 1:3] = grid!(
 	default_colgap=15,
 	halign=:left,
 )
+manual_threshold = Textbox(
+	robot_controls_upper[1, 2];
+	placeholder="Enter Threshold...",
+	# font=:ui_font,
+	tellwidth=false,
+	halign=:right,
+    reset_on_defocus = true,
+    validator = Float64,
+)
+
+robot_controls_lower = GridLayout(robot_controls[2, 1])
 # the possible threshold values are adapted to the minimum and maximum in the current data
 heightrange = @lift round.(
 	range(extrema(reduce(vcat, [c.heights for c in $data.clustering]))..., 3000),
 	sigdigits=4,
 )
 threshold = Slider(
-	robot_controls[2, 2]; range=heightrange, startvalue=(@lift median($heightrange))
-) #TODO: fixed choice of range after deciding on dissimilarity measure
-Label(robot_controls[2, 1], "Threshold"; halign=:left, font=:ui_font)
-Label(robot_controls[2, 3], @lift string($(threshold.value)); halign=:right, font=:ui_font)
-# TODO add texbox above to enter specific value?
+	robot_controls_lower[1, 2]; range=heightrange, startvalue=(@lift median($heightrange))
+) #TODO: fixed choice of range after deciding on dissimilarity measure? Rethink range in general
+Label(robot_controls_lower[1, 1], "Threshold"; halign=:left, font=:ui_font)
+Label(
+	robot_controls_lower[1, 3],
+	@lift string($(threshold.value));
+	halign=:right,
+	font=:ui_font,
+)
 # make this column resize with the window and take up all remaining available space
 colsize!(controls, 4, Auto())
 
