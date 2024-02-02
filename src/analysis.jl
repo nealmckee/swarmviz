@@ -94,7 +94,7 @@ function analyse_tracking(filename)
 			] .+ 1
 		) ./ 2
 	velocity_dist = [
-		[min(v[i] / v[j], v[j] / v[i]) for i in eachindex(v), j in 1:(i - 1)] for
+		[1 - min(v[i] / v[j], v[j] / v[i]) for i in eachindex(v), j in 1:(i - 1)] for
 		v in eachslice(velocity_magnitude; dims=(TIME, PROPERTIES))
 	]
 	min_dist = minimum(stack(distmats))
