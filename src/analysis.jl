@@ -24,7 +24,7 @@ function analyse_tracking(filename)
 	robot_data[:, θ, :] = mod2pi.(robot_data[:, θ, :])
 	heading_vector_xs = cos.(robot_data[:, θ:θ, :])
 	heading_vector_zs = sin.(robot_data[:, θ:θ, :])
-	fs = 1 ÷ mean(diff(robot_data[:, T:T, :]; dims=TIME))
+	fs = round(Int, 1 / mean(diff(robot_data[:, T:T, :]; dims=TIME)))
 	# TODO: tvr diff
 	velocity_xs, velocity_zs =
 		[diff(robot_data[:, i:i, :]; dims=TIME) for i in (X, Z)] .* fs
