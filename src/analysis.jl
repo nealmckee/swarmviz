@@ -3,10 +3,13 @@ using Clustering
 using DSP
 using StatsBase
 
-function fitted_gamma(data, fs) # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7899139/
+# choose weighting of the total variation programmaticially like in
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7899139/
+# but with the power-weighted mean frequency instead of choosing it manually
+function fitted_gamma(data, fs)
 	periodograms = periodogram.(eachslice(data; dims=(ROBOTS, PROPERTIES)), fs=fs)
 	mean_power = mean(vec([pg.power for pg in periodograms]))
-	mean_frequency = mean(mean_power, weights(mean_power))
+	mean_frequency = mean(periodograms[1].freq, weights(mean_power))
 	return exp(-1.6 * log(mean_frequency) + 0.71 * log(fs) - 5.1)
 end
 
