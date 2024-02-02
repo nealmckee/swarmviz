@@ -7,7 +7,7 @@ function fitted_gamma(data, fs) # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7
 	periodograms = periodogram.(eachslice(data; dims=(ROBOTS, PROPERTIES)), fs=fs)
 	mean_power = mean(vec([pg.power for pg in periodograms]))
 	mean_frequency = mean(mean_power, weights(mean_power))
-    return exp(-1.6 * log(mean_frequency) + 0.71 * log(fs) -5.1)
+	return exp(-1.6 * log(mean_frequency) + 0.71 * log(fs) - 5.1)
 end
 
 function analyse_tracking(filename)
@@ -23,9 +23,11 @@ function analyse_tracking(filename)
 	heading_vector_zs = sin.(robot_data[:, θ:θ, :])
 	fs = 1 ÷ mean(diff(robot_data[:, T:T, :]; dims=TIME))
 	# TODO: tvr diff
-
-    velocity_magnitude = sqrt.(velocity_xs .^ 2 .+ velocity_zs .^ 2)
-
+	velocity_xs, velocity_zs =
+		[diff(robot_data[:, i:i, :]; dims=TIME) for i in (X, Z)] .* fs
+	velocity_magnitude = sqrt.(velocity_xs .^ 2 .+ velocity_zs .^ 2)
+	acceleration_xs, acceleration_zs =
+		[diff(vs; dims=TIME) for vs in (velocity_xs, velocity_zs)] .* fs
 	acceleration_magnitude = sqrt.(acceleration_xs .^ 2 .+ acceleration_zs .^ 2)
 
 	robot_data = cat(
@@ -37,7 +39,7 @@ function analyse_tracking(filename)
 		velocity_magnitude,
 		acceleration_xs,
 		acceleration_zs,
-		acceleration_magnitude,
+		acceleration_magnitude;
 		dims=PROPERTIES,
 	)
 
