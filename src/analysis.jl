@@ -1,15 +1,13 @@
 import LazySets: convex_hull
 using Clustering
 using DSP
+using StatsBase
 
-function apply_lowpass(data, cutoff, order, dts)
-	return permutedims(
-		filt(
-			digitalfilter(Lowpass(cutoff; fs=1 ÷ mean(dts)), Butterworth(order)),
-			permutedims(data .- data[:, :, 1], (3, 1, 2)),
-		),
-		(2, 3, 1),
-	) .+ data[:, :, 1]
+function fitted_gamma(data, fs) # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7899139/
+	periodograms = periodogram.(eachslice(data; dims=(ROBOTS, PROPERTIES)), fs=fs)
+	mean_power = mean(vec([pg.power for pg in periodograms]))
+	mean_frequency = mean(mean_power, weights(mean_power))
+    return exp(-1.6 * log(mean_frequency) + 0.71 * log(fs) -5.1)
 end
 
 function analyse_tracking(filename)
@@ -23,46 +21,12 @@ function analyse_tracking(filename)
 	robot_data[:, θ, :] = mod2pi.(robot_data[:, θ, :])
 	heading_vector_xs = cos.(robot_data[:, θ:θ, :])
 	heading_vector_zs = sin.(robot_data[:, θ:θ, :])
-	dts =
-		mean.(eachslice(diff(robot_data[:, T:T, :]; dims=TIME); dims=(ROBOTS, PROPERTIES)))
-	xs_lowpass, zs_lowpass = [
-		apply_lowpass(robot_data[:, i:i, :], 0.16, 1, dts) for i in (X, Z)
-	]
+	fs = 1 ÷ mean(diff(robot_data[:, T:T, :]; dims=TIME))
+	# TODO: tvr diff
 
-	velocity_xs, velocity_zs = [
-		cat(
-			zeros(n_robots, 1, 1),
-			apply_lowpass(diff(pos_lp; dims=TIME) ./ dts, 0.16, 1, dts);
-			dims=TIME,
-		) for pos_lp in (xs_lowpass, zs_lowpass)
-	]
-	velocity_magnitude = sqrt.(velocity_xs .^ 2 .+ velocity_zs .^ 2)
-	acceleration_xs, acceleration_zs = [
-		cat(
-			apply_lowpass(diff(vel_lp; dims=TIME) ./ dts, 0.16, 1, dts),
-			zeros(n_robots, 1, 1);
-			dims=TIME,
-		) for vel_lp in (velocity_xs, velocity_zs)
-	]
+    velocity_magnitude = sqrt.(velocity_xs .^ 2 .+ velocity_zs .^ 2)
+
 	acceleration_magnitude = sqrt.(acceleration_xs .^ 2 .+ acceleration_zs .^ 2)
-	angular_velocity = cat(
-		zeros(n_robots, 1, 1),
-		map(
-			d -> abs(d) < pi ? d : -sign(d) * (2pi - abs(d)),
-			diff(robot_data[:, θ:θ, :]; dims=TIME),
-		) ./ dts;
-		dims=TIME,
-	)
-	angular_velocity_lowpass = permutedims(
-		filt(
-			digitalfilter(Lowpass(0.05; fs=30), Butterworth(1)),
-			permutedims(angular_velocity[1:10, :, :], (3, 1, 2)),
-		),
-		(2, 3, 1),
-	)
-	angular_acceleration = cat(
-		diff(angular_velocity_lowpass; dims=TIME), zeros(n_robots, 1, 1); dims=TIME
-	)
 
 	robot_data = cat(
 		robot_data,
@@ -74,8 +38,6 @@ function analyse_tracking(filename)
 		acceleration_xs,
 		acceleration_zs,
 		acceleration_magnitude,
-		angular_velocity,
-		angular_acceleration;
 		dims=PROPERTIES,
 	)
 
@@ -119,10 +81,13 @@ function analyse_tracking(filename)
 		mean(dot(a, s[j, :]) for (i, a) in enumerate(eachrow(s)) for j in 1:(i - 1)) for
 		s in eachslice(robot_data[:, [ACCX, ACCZ], :]; dims=TIME)
 	]
-
+	cosine_dist = [
+		pairwise(Cosine(), permutedims(s)) for
+		s in eachslice(robot_data[:, [X, Z], :]; dims=TIME)
+	]
 	clusterings = hclust.(distmats, branchorder=:barjoseph)
 	single_cluster_thresholds = [maximum(c.heights) for c in clusterings]
-    two_cluster_thresholds = [sort(c.heights)[end-1] for c in clusterings]
+	two_cluster_thresholds = [sort(c.heights)[end - 1] for c in clusterings]
 
 	metrics = Dict(
 		"Polarisation" => polarisation,
@@ -134,7 +99,7 @@ function analyse_tracking(filename)
 		"Max Min IID" => maxmindist,
 		"Correlation of Acceleration" => acceleration_correlation,
 		"1 to 2 Clusters Threshold" => single_cluster_thresholds,
-        "2 to 3 Clusters Threshold" => two_cluster_thresholds,
+		"2 to 3 Clusters Threshold" => two_cluster_thresholds,
 		"X_lowpass" => xs_lowpass[1, 1, :],
 		"VEL" => velocity_xs[1, 1, :],
 		"Acc" => acceleration_xs[1, 1, :],
