@@ -41,6 +41,7 @@ PALETTE = [ #TODO make const
 include("src/metrics.jl")
 include("src/analysis.jl")
 include("src/dataprocessing.jl")
+# include("src/tvdiff.jl") #TODO remove after final rejection
 
 """
 Struct that holds all the data input as well as everything we calculate.

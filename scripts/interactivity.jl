@@ -21,9 +21,9 @@ end
 
 # CONTROLS
 
-# set the threshold to the content of the textbox if it can be parsed to a Float64
-on(manual_threshold.stored_string) do s
-	set_close_to!(threshold, parse(Float64, s))
+# set the log threshold to the content of the textbox if it can be parsed to a Float64
+on(manual_log_threshold.stored_string) do s
+	set_close_to!(log_threshold, parse(Float64, s))
 end
 
 # IO
@@ -91,9 +91,9 @@ on(export_metrics_button.clicks) do c
 	# if it’s not cancelled
 	export_folder != "" && return nothing
 	# first reshape the datapoints into their different output formats if necessary
-	robots_df = robotdata2longerdf(data, threshold)
+	robots_df = robotdata2longerdf(data, log_threshold)
 	distance_matrices, furthest_robots, center_of_mass = derived2tensors(data)
-	chosen_clustering_threshold = threshold.value[]
+	chosen_clustering_threshold = exp(log_threshold.value[])
 	# then write them to the matching files types
 	Parquet2.writefile(joinpath(export_folder, "robots.parquet"), robots_df)
 	Parquet2.writefile(

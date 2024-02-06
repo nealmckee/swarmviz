@@ -87,12 +87,12 @@ robot_controls_upper[1, 1] = grid!(
 		robot_toggles,
 	);
 	default_rowgap=3,
-	default_colgap=15,
+	default_colgap=3,
 	halign=:left,
 )
-manual_threshold = Textbox(
+manual_log_threshold = Textbox(
 	robot_controls_upper[1, 2];
-	placeholder="Enter Threshold...",
+	placeholder="Enter Log Thresh.",
 	# font=:ui_font,
 	tellwidth=false,
 	halign=:right,
@@ -103,18 +103,20 @@ manual_threshold = Textbox(
 robot_controls_lower = GridLayout(robot_controls[2, 1])
 # the possible threshold values are adapted to the minimum and maximum in the current data
 heightrange = @lift round.(
-	range(extrema(reduce(vcat, [c.heights for c in $data.clustering]))..., 3000),
+	range(log.(extrema(reduce(vcat, [c.heights for c in $data.clustering])))..., 3000),
 	sigdigits=4,
 )
-threshold = Slider(
+log_threshold = Slider(
 	robot_controls_lower[1, 2]; range=heightrange, startvalue=(@lift median($heightrange))
 ) #TODO: fixed choice of range after deciding on dissimilarity measure? Rethink range in general
-Label(robot_controls_lower[1, 1], "Threshold"; halign=:left, font=:ui_font)
+Label(robot_controls_lower[1, 1], "Log Threshold"; halign=:left, font=:ui_font)
 Label(
 	robot_controls_lower[1, 3],
-	@lift string($(threshold.value));
+	@lift string($(log_threshold.value));
 	halign=:right,
 	font=:ui_font,
+    tellwidth=true,
+    width=30, #TODO fine tune depending on final range
 )
 # make this column resize with the window and take up all remaining available space
 colsize!(controls, 4, Auto())

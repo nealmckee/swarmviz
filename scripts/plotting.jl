@@ -6,7 +6,7 @@
 x, y, r = [@lift $data.robots[:, i, $(timestep.value)] for i in [X, Z, θ]]
 # make color of robots dependent on clustering
 robot_colors = cluster_coloring_obs(
-	data, timestep, threshold, robot_toggles, discrete_palette
+	data, timestep, log_threshold, robot_toggles, discrete_palette
 )
 # make glowcolor of robots dependend on collisions
 g = collision_coloring_obs(

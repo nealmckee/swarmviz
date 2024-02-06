@@ -1,4 +1,4 @@
-function robotdata2longerdf(data, threshold)
+function robotdata2longerdf(data, log_threshold)
 	df = DataFrame(
 		reshape(permutedims(data[].robots, (1, 3, 2)), (:, size(data[].robots, 2), 1))[
 			:, :, 1
@@ -22,8 +22,8 @@ function robotdata2longerdf(data, threshold)
 		],
 	)
 	df.robot_id = repeat(1:size(data[].robots, 1); inner=size(data[].robots, 3))
-	df[!, "Clustering at Threshold = $(threshdold.value[])"] = reduce(
-		vcat, cutree.(data[].clustering; h=threshold.value[])
+	df[!, "Clustering at Threshold = $(exp(log_threshdold.value[]))"] = reduce(
+		vcat, cutree.(data[].clustering; h=log_threshold.value[])
 	)
 	return df
 end
@@ -35,13 +35,13 @@ function derived2tensors(data)
 	return distance_matrices, furthest_robots, center_of_mass
 end
 
-function cluster_coloring_obs(data, timestep, threshold, robot_toggles, discrete_palette)
+function cluster_coloring_obs(data, timestep, log_threshold, robot_toggles, discrete_palette)
 	return @lift (
 		if !$(robot_toggles[2].active)
 			repeat([RGBA(0, 0, 0, 1)], size($data.robots, 1))
 		else
 			$discrete_palette[collect(
-				cutree($data.clustering[$(timestep.value)]; h=$(threshold.value))
+				cutree($data.clustering[$(timestep.value)]; h=exp($(log_threshold.value)))
 			)]
 		end
 	)
