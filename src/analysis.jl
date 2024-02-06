@@ -14,6 +14,7 @@ function analyse_tracking(filename)
 	robot_data[:, θ, :] = mod2pi.(robot_data[:, θ, :])
 	heading_vector_xs = cos.(robot_data[:, θ:θ, :])
 	heading_vector_zs = sin.(robot_data[:, θ:θ, :])
+    #TODO remove after final rejection
     # choose weighting of the total variation programmaticially like in
     # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7899139/
 	# fs = round(Int, 1 / mean(diff(robot_data[:, T:T, :]; dims=TIME)))
@@ -69,7 +70,7 @@ function analyse_tracking(filename)
 		robot_data,
 		heading_vector_xs,
 		heading_vector_zs,
-		# velocity_xs,
+		# velocity_xs, #TODO remove after final rejection
 		# velocity_zs,
 		# velocity_magnitude,
 		# acceleration_xs,
@@ -116,6 +117,7 @@ function analyse_tracking(filename)
 		4pi * A / sum(colwise(Euclidean(), stack(p), stack(vcat(p[2:end], [p[1]]))))^2 for
 		(p, A) in zip(surrounding_polygon, area)
 	]
+    #TODO remove after final rejection
 	# acceleration_moving_average = map(x -> conv(ones(61) / 61, x), acceleration_magnitude)
 	# acceleration_correlation = [
 	# 	mean(dot(a, s[j, :]) for (i, a) in enumerate(eachrow(s)) for j in 1:(i - 1)) for
