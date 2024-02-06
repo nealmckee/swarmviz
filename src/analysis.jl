@@ -136,8 +136,8 @@ function analyse_tracking(filename)
 		sum([reduce(-, extrema(robot_data[:, i, :]))^2 for i in (X, Z)])
 	)
 	dissimilarity_matrices = [
-		1 .- ((1 .- dm ./ visited_diameter) .* (1 .- cdm)) .^ (1 / 3) for (dm, cdm, vsm) in
-		zip(distance_matrices, cosine_distance_matrices, velocity_similarity_matrices)
+		1 .- ((1 .- dm ./ visited_diameter) .* (1 .- cdm)) .^ (1 / 3) for (dm, cdm) in
+		zip(distance_matrices, cosine_distance_matrices)
 	]
 	clusterings = hclust.(dissimilarity_matrices, branchorder=:barjoseph)
 	single_cluster_thresholds = [log(maximum(c.heights)) for c in clusterings]
