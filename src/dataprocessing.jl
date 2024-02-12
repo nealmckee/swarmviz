@@ -11,28 +11,24 @@ function robotdata2longerdf(data, log_threshold)
 			:angle_xz,
 			:heading_x,
 			:heading_z,
-			:velocity_x,
-			:velocity_z,
-			:l2norm_velocity_xy,
-			:acceleration_x,
-			:acceleration_z,
-			:l2norm_acceleration_xz,
-			:angular_velocity,
-			:angular_acceleration,
 		],
 	)
 	df.robot_id = repeat(1:size(data[].robots, 1); inner=size(data[].robots, 3))
-	df[!, "Clustering at Threshold = $(exp(log_threshdold.value[]))"] = reduce(
+	df[!, "Clustering at Threshold = $(exp(log_threshold.value[]))"] = reduce(
 		vcat, cutree.(data[].clustering; h=log_threshold.value[])
 	)
 	return df
 end
 
 function derived2tensors(data)
-	distance_matrices = stack(data[].derived["Distance Matrices"])
-	furthest_robots = stack(data[].derived["Furthest Robots"])
-	center_of_mass = stack(data[].derived["Center of Mass"])
-	return distance_matrices, furthest_robots, center_of_mass
+    tensors = Dict()
+	tensors["distance_matrices"] = stack(data[].derived["Distance Matrices"])
+	tensors["furthest_robots"] = stack(data[].derived["Furthest Robots"])
+	tensors["center_of_mass"] = stack(data[].derived["Center of Mass"])
+    tensors["clustering/clustering_heights"] = stack([c.heights for c in data[].clustering])
+    tensors["clustering/clustering_merges"] = stack([c.merges for c in data[].clustering])
+    tensors["clustering/clustering_order"] = stack([c.order for c in data[].clustering])
+    return tensors
 end
 
 function cluster_coloring_obs(data, timestep, log_threshold, robot_toggles, discrete_palette)

@@ -89,16 +89,21 @@ on(export_metrics_button.clicks) do c
 	# on button press, opens a native file dialogue
 	export_folder = pick_folder()
 	# if it’s not cancelled
-	export_folder != "" && return nothing
+	export_folder == "" && return nothing
 	# first reshape the datapoints into their different output formats if necessary
 	robots_df = robotdata2longerdf(data, log_threshold)
-	distance_matrices, furthest_robots, center_of_mass = derived2tensors(data)
+	tensors = derived2tensors(data)
 	chosen_clustering_threshold = exp(log_threshold.value[])
 	# then write them to the matching files types
 	Parquet2.writefile(joinpath(export_folder, "robots.parquet"), robots_df)
 	Parquet2.writefile(
 		joinpath(export_folder, "metrics.parquet"), DataFrame(data[].metrics)
 	)
-	JLD2.@save joinpath(export_folder, "derived.jld2") distance_matrices furthest_robots center_of_mass chosen_clustering_threshold
-	JSON3.write(joinpath(export_folder, "convex_hull.json"), data[].derived["Convex Hull"])
+    jldopen(joinpath(export_folder, "derived.jld2"), "w") do file
+        for (p,t) in tensors
+            file[p] = t
+        end
+        file["clustering/chosen_clustering_threshold"] = chosen_clustering_threshold
+    end
+    JSON3.write(joinpath(export_folder, "convex_hull.json"), data[].derived["Convex Hull"])
 end

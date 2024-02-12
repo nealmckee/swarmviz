@@ -19,12 +19,9 @@ const T = 1
 const X = 2
 const Z = 4
 const θ = 5
-# TODO: add more constants if we require denoised derivatives
 const HVX = 6
 const HVZ = 7
-const ACCX = 11 #TODO remove?
-const ACCZ = 12 #TODO remove?
-const TRACKING_DIM = 5 #TODO change if more inputs required or make adaptive?
+const TRACKING_DIM = 5
 # operating system dependent path to the assets folder
 FONTFOLDER = RelocatableFolders.@path joinpath(@__DIR__, "assets") #TODO make const
 # color vision deficiency friendly discrete color palette
@@ -41,7 +38,6 @@ PALETTE = [ #TODO make const
 include("src/metrics.jl")
 include("src/analysis.jl")
 include("src/dataprocessing.jl")
-# include("src/tvdiff.jl") #TODO remove after final rejection
 
 """
 Struct that holds all the data input as well as everything we calculate.
