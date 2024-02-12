@@ -3,7 +3,7 @@ function robotdata2longerdf(data, log_threshold)
 		reshape(permutedims(data[].robots, (1, 3, 2)), (:, size(data[].robots, 2), 1))[
 			:, :, 1
 		],
-		[ #TODO check what’s left after discussing preprocessing etc.
+		[
 			:t,
 			:x,
 			:y,

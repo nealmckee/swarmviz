@@ -14,9 +14,8 @@ g = collision_coloring_obs(
 )
 
 # Plot the robot swarm
-#TODO: move center to center of mass
-robot_marker = Makie.Polygon(Point2f[(-1, -1), (0, 0), (-1, 1), (2, 0)])
-marker_scale = (@lift round(Int, 20 / sqrt(size($data.robots, 1))))
+robot_marker = Makie.Polygon(Point2f[(-4, -3), (-1, 0), (-4, 3), (5, 0)])
+marker_scale = (@lift round(Int, 6 / sqrt(size($data.robots, 1))))
 scatter!(
 	swarm_animation,
 	x,
