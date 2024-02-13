@@ -16,23 +16,25 @@ function analyse_tracking(filename)
 
 	# precalculate all metrics for all timesteps (currently no clustering)
 	#TODO: more outsourcing to metrics.jl?
+	center_of_mass = [
+		mean(eachslice(s; dims=ROBOTS)) for
+		s in eachslice(robot_data[:, [X, Z], :]; dims=TIME)
+	]
 	polarisation = swarm_polarisation.(eachslice(robot_data; dims=TIME))
-	rotational_order = swarm_rotational_order.(eachslice(robot_data; dims=TIME))
+	rotational_order =
+		swarm_rotational_order.(eachslice(robot_data; dims=TIME), center_of_mass)
 	distance_matrices = [
 		pairwise(Euclidean(), permutedims(s)) for
 		s in eachslice(robot_data[:, [X, Z], :]; dims=TIME)
 	]
 	mean_interindividual_distance =
 		mean.(distance_matrices) .* (1 .+ 1 ./ (size.(distance_matrices, 1) .- 1))
-	surrounding_polygon =
+	convex_hulls =
 		convex_hull.(
 			collect(eachslice(s; dims=ROBOTS)) for
 			s in eachslice(robot_data[:, [X, Z], :]; dims=TIME)
 		)
-	center_of_mass = [
-		mean(eachslice(s; dims=ROBOTS)) for
-		s in eachslice(robot_data[:, [X, Z], :]; dims=TIME)
-	]
+
 	findmaxdist = [findmax(m) for m in distance_matrices]
 	diameter = [f[1] for f in findmaxdist]
 	furthest = [[f[2][1], f[2][2]] for f in findmaxdist]
@@ -40,18 +42,12 @@ function analyse_tracking(filename)
 		maximum(minimum.(eachcol(m + diagm(Inf * ones(size(m, 1)))))) for
 		m in distance_matrices
 	]
-	area = [ #TODO: outsource
-		0.5 * abs( # shoelace formula for area of polygon (https://en.wikipedia.org/wiki/Shoelace_formula)
-			sum(
-				p[i][1] * p[i % length(p) + 1][2] - p[i % length(p) + 1][1] * p[i][2] for
-				i in eachindex(p)
-			),
-		) for p in surrounding_polygon
-	]
+	area = shoelace_area.(convex_hulls)
 	roundness = [
-		4pi * A / sum(colwise(Euclidean(), stack(p), stack(vcat(p[2:end], [p[1]]))))^2 for
-		(p, A) in zip(surrounding_polygon, area)
+		4pi * A / sum(colwise(Euclidean(), stack(p), stack(circshift(p, -1))))^2 for
+		(p, A) in zip(convex_hulls, area)
 	]
+	#TODO: add mean lowest distance?
 
 	cosine_distance_matrices =
 		[
@@ -79,7 +75,7 @@ function analyse_tracking(filename)
 		"Log Last Merge Threshold" => single_cluster_thresholds,
 	)
 	derived = Dict( #TODO: rename
-		"Convex Hull" => surrounding_polygon,
+		"Convex Hull" => convex_hulls,
 		"Center of Mass" => center_of_mass,
 		"Furthest Robots" => furthest,
 		"Distance Matrices" => distance_matrices,

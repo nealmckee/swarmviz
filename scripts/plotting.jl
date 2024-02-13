@@ -16,6 +16,7 @@ g = collision_coloring_obs(
 # Plot the robot swarm
 robot_marker = Makie.Polygon(Point2f[(-4, -3), (-1, 0), (-4, 3), (5, 0)])
 marker_scale = (@lift round(Int, 6 / sqrt(size($data.robots, 1))))
+glow_scale = (@lift $marker_scale * 3)
 scatter!(
 	swarm_animation,
 	x,
@@ -25,7 +26,7 @@ scatter!(
 	rotations=r,
 	color=robot_colors,
 	glowcolor=g,
-	glowwidth=marker_scale,
+	glowwidth=glow_scale,
 )
 
 # Plot the wall of the enclosure
@@ -90,7 +91,7 @@ metric_menus = [
 		metrics_grid[i, 1, Top()];
 		options=metric_tuples,
 		default=default,
-		width=150, #TODO: adapt length to max length of final metric selection
+		width=190,
 		height=24,
 		halign=:left,
 		selection_cell_color_inactive=:transparent,

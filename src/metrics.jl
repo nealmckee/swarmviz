@@ -4,11 +4,10 @@ function swarm_polarisation(tracking_datapoint)
 end
 
 # Calculate the rotational order of the swarm for the data of one timestep
-function swarm_rotational_order(tracking_datapoint)
+function swarm_rotational_order(tracking_datapoint, center_of_mass)
 	clustersize = size(tracking_datapoint, ROBOTS)
-	barycenter = sum(tracking_datapoint[:, [X, Z]]; dims=ROBOTS) ./ clustersize
 	radial_unit_vectors = mapslices(
-		x -> x / norm(x), tracking_datapoint[:, [X, Z]] .- barycenter; dims=PROPERTIES
+		x -> x / norm(x), tracking_datapoint[:, [X, Z]] .- center_of_mass'; dims=PROPERTIES
 	)
 	return norm(
 		sum([
@@ -20,12 +19,8 @@ function swarm_rotational_order(tracking_datapoint)
 	) / clustersize
 end
 
-function swarm_mean_interindividual_distance(tracking_datapoint)
-	return mean(pairwise(Euclidean(), tracking_datapoint[:, [X, Z]]; dims=ROBOTS))
-end #TODO reuse Euclidean distance for futhest, diameter, mean lowest
-
-function swarm_max_interindividual_distance(tracking_datapoint) #TODO unused -> remove
-	return maximum(pairwise(Euclidean(), tracking_datapoint[:, [X, Z]]; dims=ROBOTS))
+function shoelace_area(polygon)
+	return 0.5 * abs(
+		sum(a[1] * b[2] - b[1] * a[2] for (a, b) in zip(polygon, circshift(polygon, -1)))
+	)
 end
-
-#TODO: add mean lowest distance?

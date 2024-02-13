@@ -109,6 +109,7 @@ heightrange = @lift round.(
 log_threshold = Slider(
 	robot_controls_lower[1, 2]; range=heightrange, startvalue=(@lift median($heightrange))
 ) #TODO: fixed choice of range after deciding on dissimilarity measure? Rethink range in general
+#TODO even neg log with reversed range?
 Label(robot_controls_lower[1, 1], "Log Threshold"; halign=:left, font=:ui_font)
 Label(
 	robot_controls_lower[1, 3],
