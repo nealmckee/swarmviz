@@ -38,13 +38,13 @@ function cluster_coloring_obs(
 end
 
 function recent_collision(collisions, agent_index, timestep_value, skip_value)
-	isinbounds = checkbounds(Bool, collisions, 1, timestep_value)
+	!checkbounds(Bool, collisions, 1, timestep_value) && return false
 	collision_occured = any(
 		collisions[
 			agent_index, max((timestep_value - skip_value), 1):(timestep_value)
 		],
 	)
-	return isinbounds && collision_occured
+	return collision_occured
 end
 
 function collision_coloring_obs(
