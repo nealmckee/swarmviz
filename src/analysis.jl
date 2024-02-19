@@ -59,7 +59,7 @@ function analyse_tracking(filename)
 		sum([reduce(-, extrema(agent_data[:, i, :]))^2 for i in (X, Z)])
 	)
 	dissimilarity_matrices = [
-		1 .- sqrt((1 .- dm ./ visited_diameter) .* (1 .- cdm)) for
+		1 .- sqrt.((1 .- dm ./ visited_diameter) .* (1 .- cdm)) for
 		(dm, cdm) in zip(distance_matrices, cosine_distance_matrices)
 	]
 	clusterings = hclust.(dissimilarity_matrices, branchorder=:barjoseph)
