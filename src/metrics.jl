@@ -1,4 +1,4 @@
-function swarm_polarisation(tracking_datapoint)
+function swarm_polarization(tracking_datapoint)
 	return norm(sum(tracking_datapoint[:, [HVX, HVZ]]; dims=1)) /
 		   size(tracking_datapoint, 1)
 end

@@ -86,6 +86,6 @@ function julia_main()::Cint
 	include("scripts/plotting.jl")
 
 	# Display the resulting figure in its own window
-	display(figure)
+	display(figure);
 	return 0
 end

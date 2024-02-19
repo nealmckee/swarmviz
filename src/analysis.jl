@@ -18,7 +18,7 @@ function analyse_tracking(filename)
 		mean(eachslice(s; dims=AGENTS)) for
 		s in eachslice(agent_data[:, [X, Z], :]; dims=TIME)
 	]
-	polarisation = swarm_polarisation.(eachslice(agent_data; dims=TIME))
+	polarization = swarm_polarization.(eachslice(agent_data; dims=TIME))
 	rotational_order =
 		swarm_rotational_order.(eachslice(agent_data; dims=TIME), center_of_mass)
 	distance_matrices = [
@@ -66,7 +66,7 @@ function analyse_tracking(filename)
 	single_cluster_thresholds = [log(maximum(c.heights)) for c in clusterings]
 
 	metrics = Dict(
-		"Polarisation" => polarisation,
+		"Polarization" => polarization,
 		"Rotational Order" => rotational_order,
 		"Mean IID" => mean_interindividual_distance,
 		"Diameter" => diameter,

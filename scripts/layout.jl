@@ -30,7 +30,7 @@ colsize!(figure.layout, 2, Relative(0.5))
 # create the sliders that controls the current timestep together
 # with custom labels that allow changing the font
 timestep = Slider(time_grid[1, 2]; range=timesteps, startvalue=1)
-Label(time_grid[1, 1]; text="Timestep", halign=:left, font=:ui_font)
+Label(time_grid[1, 1]; text="Time Step", halign=:left, font=:ui_font)
 Label(time_grid[1, 3], @lift string($(timestep.value)); halign=:right, font=:ui_font)
 
 # CONTROLS
@@ -140,7 +140,7 @@ import_button, wall_button, collision_button, export_metrics_button =
 metric_axes = [Axis(metrics_grid[row, 1]; xticklabelsvisible=false) for row in 1:3]
 collisions_axis = Axis(
 	metrics_grid[4, 1];
-	xlabel="Timestep",
+	xlabel="Time Step",
 	yticklabelsvisible=false,
 	yticksvisible=false,
 	height=10,
