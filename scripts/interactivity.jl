@@ -70,6 +70,7 @@ end
 on(collision_button.clicks) do c
 	# on button press, opens a native file dialogue
 	collisions_folder = pick_folder()
+    collisions_folder == "" && return nothing
 	# parses the chosen directory for files with the ending specified in the readme
 	wall_collisons_path = filter(
 		x -> occursin(r".*warefl.json", x), readdir(collisions_folder; join=true)
