@@ -5,7 +5,7 @@ end
 
 # Calculate the rotational order of the swarm for the data of one timestep
 function swarm_rotational_order(tracking_datapoint, center_of_mass)
-	clustersize = size(tracking_datapoint, ROBOTS)
+	clustersize = size(tracking_datapoint, AGENTS)
 	radial_unit_vectors = mapslices(
 		x -> x / norm(x), tracking_datapoint[:, [X, Z]] .- center_of_mass'; dims=PROPERTIES
 	)

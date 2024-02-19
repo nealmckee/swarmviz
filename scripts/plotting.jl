@@ -3,28 +3,28 @@
 # ANIMATION
 
 # Make coordinates and rotation responsive to the time slider
-x, y, r = [@lift $data.robots[:, i, $(timestep.value)] for i in [X, Z, θ]]
-# make color of robots dependent on clustering
-robot_colors = cluster_coloring_obs(
-	data, timestep, log_threshold, robot_toggles, discrete_palette
+x, y, r = [@lift $data.agents[:, i, $(timestep.value)] for i in [X, Z, θ]]
+# make color of agents dependent on clustering
+agent_colors = cluster_coloring_obs(
+	data, timestep, log_threshold, agent_toggles, discrete_palette
 )
-# make glowcolor of robots dependend on collisions
+# make glowcolor of agents dependend on collisions
 g = collision_coloring_obs(
-	data, agent_collisions, wall_collisions, timestep, skip, robot_toggles
+	data, agent_collisions, wall_collisions, timestep, skip, agent_toggles
 )
 
-# Plot the robot swarm
-robot_marker = Makie.Polygon(Point2f[(-4, -3), (-1, 0), (-4, 3), (5, 0)])
-marker_scale = (@lift round(Int, 6 / sqrt(size($data.robots, 1))))
+# Plot the agent swarm
+agent_marker = Makie.Polygon(Point2f[(-4, -3), (-1, 0), (-4, 3), (5, 0)])
+marker_scale = (@lift round(Int, 6 / sqrt(size($data.agents, 1))))
 glow_scale = (@lift $marker_scale * 3)
 scatter!(
 	swarm_animation,
 	x,
 	y;
-	marker=robot_marker,
+	marker=agent_marker,
 	markersize=marker_scale,
 	rotations=r,
-	color=robot_colors,
+	color=agent_colors,
 	glowcolor=g,
 	glowwidth=glow_scale,
 )
@@ -69,12 +69,12 @@ diameter = lines!(
 	swarm_animation,
 	@lift Point2f.(
 		eachslice(
-			$data.robots[
+			$data.agents[
 				$data.derived["Furthest Robots"][$(timestep.value)],
 				[X, Z],
 				$(timestep.value),
 			];
-			dims=ROBOTS,
+			dims=AGENTS,
 		)
 	);
 	color="#8f8f8f",
@@ -90,14 +90,13 @@ metric_menus = [
 	Menu(
 		metrics_grid[i, 1, Top()];
 		options=metric_tuples,
-		default=default,
 		width=190,
 		height=24,
 		halign=:left,
 		selection_cell_color_inactive=:transparent,
 		textcolor="#8f8f8f",
 		prompt="Select Metric...",
-	) for (i, default) in enumerate(["Polarisation", "Rotational Order", "Diameter"]) #TODO remove defaults after debugging
+    ) for i in 1:3
 ]
 
 # plot the metrics when one is chosen from the corresponding menu
@@ -120,7 +119,6 @@ for (i, (menu, axis)) in enumerate(zip(metric_menus, metric_axes))
 			)
 		end
 	end
-	notify(menu.selection) #TODO remove after debugging
 end
 
 # plot collisions
@@ -135,7 +133,7 @@ collision_plots = [
 	enumerate(zip([wall_collisions, agent_collisions], [PALETTE[4], PALETTE[5]]))
 ]
 for p in collision_plots
-	connect!(p.visible, robot_toggles[1].active)
+	connect!(p.visible, agent_toggles[1].active)
 end
 
 # plot timestep markers in metrics and collision axes

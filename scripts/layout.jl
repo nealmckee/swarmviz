@@ -32,7 +32,6 @@ colsize!(figure.layout, 2, Relative(0.5))
 timestep = Slider(time_grid[1, 2]; range=timesteps, startvalue=1)
 Label(time_grid[1, 1]; text="Timestep", halign=:left, font=:ui_font)
 Label(time_grid[1, 3], @lift string($(timestep.value)); halign=:right, font=:ui_font)
-#TODO add textbox to enter specific value?
 
 # CONTROLS
 
@@ -73,51 +72,53 @@ controls[1, 3] = grid!(
 	tellheight=true,
 )
 
-# toggles to control what is displayed on the robot markers in the animation
+# toggles to control what is displayed on the agent markers in the animation
 # as well as which threshold is applied to the hierarchical clustering for the coloring
-robot_controls = GridLayout(controls[1, 4]; default_rowgap=3)
-robot_controls_upper = GridLayout(robot_controls[1, 1]; default_rowgap=3)
-robot_toggles = [Toggle(figure) for _ in 1:2]
-robot_controls_upper[1, 1] = grid!(
+agent_controls = GridLayout(controls[1, 4]; default_rowgap=3)
+agent_controls_upper = GridLayout(agent_controls[1, 1]; default_rowgap=3)
+agent_toggles = [Toggle(figure) for _ in 1:2]
+agent_controls_upper[1, 1] = grid!(
 	hcat(
 		[
 			Label(figure, l; halign=:left, font=:ui_font) for
 			l in ["Collisions", "Clustering"]
 		],
-		robot_toggles,
+		agent_toggles,
 	);
 	default_rowgap=3,
 	default_colgap=3,
 	halign=:left,
 )
 manual_log_threshold = Textbox(
-	robot_controls_upper[1, 2];
+	agent_controls_upper[1, 2];
 	placeholder="Enter Log Thresh.",
 	# font=:ui_font,
 	tellwidth=false,
 	halign=:right,
-    reset_on_defocus = true,
-    validator = Float64,
+	reset_on_defocus=true,
+	validator=Float64,
 )
 
-robot_controls_lower = GridLayout(robot_controls[2, 1])
+agent_controls_lower = GridLayout(agent_controls[2, 1], default_colgap = 6)
 # the possible threshold values are adapted to the minimum and maximum in the current data
-heightrange = @lift round.(
-	range(log.(extrema(reduce(vcat, [c.heights for c in $data.clustering])))..., 3000),
-	sigdigits=4,
-)
+heightrange = (@lift if isempty($data.clustering)
+	collect(-4:0.001:0)
+else
+	round.(
+		range(log(minimum(reduce(vcat, [c.heights for c in $data.clustering]))), 0, 1000),
+		sigdigits=3,
+	)
+end)
 log_threshold = Slider(
-	robot_controls_lower[1, 2]; range=heightrange, startvalue=(@lift median($heightrange))
-) #TODO: fixed choice of range after deciding on dissimilarity measure? Rethink range in general
-#TODO even neg log with reversed range?
-Label(robot_controls_lower[1, 1], "Log Threshold"; halign=:left, font=:ui_font)
+	agent_controls_lower[1, 2]; range=heightrange, startvalue=(@lift minimum($heightrange))
+)
+Label(agent_controls_lower[1, 1], "Log Threshold"; halign=:left, font=:ui_font)
 Label(
-	robot_controls_lower[1, 3],
+	agent_controls_lower[1, 3],
 	@lift string($(log_threshold.value));
 	halign=:right,
 	font=:ui_font,
-    tellwidth=true,
-    width=30, #TODO fine tune depending on final range
+	width=25,
 )
 # make this column resize with the window and take up all remaining available space
 colsize!(controls, 4, Auto())

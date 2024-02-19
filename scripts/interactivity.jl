@@ -40,7 +40,7 @@ on(import_button.clicks) do c
 	discrete_palette[] = vcat(
 		RGB.(PALETTE),
 		distinguishable_colors(
-			size(data[].robots, 1) - length(PALETTE),
+			size(data[].agents, 1) - length(PALETTE),
 			vcat(RGB.(PALETTE), [RGB(0, 0, 0), RGB(1, 1, 1)]);
 			dropseed=true,
 			lchoices=range(45, 90; length=15),
@@ -51,10 +51,10 @@ on(import_button.clicks) do c
 	# (with padding for the swarm animation)
 	limits!(
 		swarm_animation,
-		minimum(data[].robots[:, X, :]) - 100,
-		maximum(data[].robots[:, X, :]) + 100,
-		minimum(data[].robots[:, Z, :]) - 100,
-		maximum(data[].robots[:, Z, :]) + 100,
+		minimum(data[].agents[:, X, :]) - 100,
+		maximum(data[].agents[:, X, :]) + 100,
+		minimum(data[].agents[:, Z, :]) - 100,
+		maximum(data[].agents[:, Z, :]) + 100,
 	)
 end
 
@@ -91,11 +91,11 @@ on(export_metrics_button.clicks) do c
 	# if it’s not cancelled
 	export_folder == "" && return nothing
 	# first reshape the datapoints into their different output formats if necessary
-	robots_df = robotdata2longerdf(data, log_threshold)
+	agents_df = agentdata2longerdf(data, log_threshold)
 	tensors = derived2tensors(data)
 	chosen_clustering_threshold = exp(log_threshold.value[])
 	# then write them to the matching files types
-	Parquet2.writefile(joinpath(export_folder, "robots.parquet"), robots_df)
+	Parquet2.writefile(joinpath(export_folder, "agents.parquet"), agents_df)
 	Parquet2.writefile(
 		joinpath(export_folder, "metrics.parquet"), DataFrame(data[].metrics)
 	)
