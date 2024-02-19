@@ -55,34 +55,37 @@ struct SwarmData
 	clustering::Vector{Hclust{Float64}}
 end
 
-# Set up dummy observables
-data = Observable(
-	SwarmData(
-		zeros(1, TRACKING_DIM + 2, 1),
-		Dict("Select Metric..." => []),
-		Dict(
-			"Convex Hull" => [[[0.0, 0.0]]],
-			"Center of Mass" => [[0.0, 0.0]],
-			"Furthest Robots" => [[1, 1]],
+function julia_main()::Cint
+	# Set up dummy observables
+	data = Observable(
+		SwarmData(
+			zeros(1, TRACKING_DIM + 2, 1),
+			Dict("Select Metric..." => []),
+			Dict(
+				"Convex Hull" => [[[0.0, 0.0]]],
+				"Center of Mass" => [[0.0, 0.0]],
+				"Furthest Robots" => [[1, 1]],
+			),
+			[],
 		),
-		[],
-	),
-)
-wall_data = Observable(zeros(2, 1))
-wall_collisions = Observable(falses(1, 1))
-agent_collisions = Observable(falses(1, 1))
-n_timesteps = @lift size($data.agents, TIME)
-timesteps = @lift 1:($n_timesteps)
-isplaying = Observable(false)
-discrete_palette = Observable(PALETTE)
+	)
+	wall_data = Observable(zeros(2, 1))
+	wall_collisions = Observable(falses(1, 1))
+	agent_collisions = Observable(falses(1, 1))
+	n_timesteps = @lift size($data.agents, TIME)
+	timesteps = @lift 1:($n_timesteps)
+	isplaying = Observable(false)
+	discrete_palette = Observable(PALETTE)
 
-# run the scripts to set up the style and layout,
-# add interactivity, and create reactive plots
-#! Order of execution matters and should never be changed!
-include("scripts/plotstyle.jl")
-include("scripts/layout.jl")
-include("scripts/interactivity.jl")
-include("scripts/plotting.jl")
+	# run the scripts to set up the style and layout,
+	# add interactivity, and create reactive plots
+	#! Order of execution matters and should never be changed!
+	include("scripts/plotstyle.jl")
+	include("scripts/layout.jl")
+	include("scripts/interactivity.jl")
+	include("scripts/plotting.jl")
 
-# Display the resulting figure in its own window
-display(figure);
+	# Display the resulting figure in its own window
+	display(figure)
+	return 0
+end
