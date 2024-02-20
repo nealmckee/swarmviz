@@ -27,9 +27,9 @@ After you’re done, hit the export to button to choose a location for all the d
 ## Metrics and Clustering
 In the following, $\vec{x}_i(t)$ is the position vector of the ith agent at time t and $\vec{n}_i(t)$ is the unit heading vector of the ith agent. $N$ is the total number of agents, $\vec{h}_i(t)$ is the position vector of the ith vertex of the convex hull (ordered by adjacency).
 
-- **Polarization** $\frac{1}{N} \left|\left| \sum_{i=1}^N \vec{n}_i(t) \right|\right|$
+- **Polarization** $\frac{1}{N} \left| \left| \sum_{i=1}^N \vec{n}_i(t) \right| \right|$
 
-- **Rotational Order** $\frac{1}{N} \left|\left| \sum_{i=1}^N \left( \vec{x}_i(t) - \frac{1}{N} \sum_{j=1}^N \vec{x}_j(t) \right) \times \vec{n}_i(t) \right|\right|$
+- **Rotational Order** $\frac{1}{N} \left| \left| \sum_{i=1}^N \left( \vec{x}_i(t) - \frac{1}{N} \sum_{j=1}^N \vec{x}_j(t) \right) \times \vec{n}_i(t) \right| \right|$
 
 For these first two also see *Zheng et. al. (2022)*.
 
