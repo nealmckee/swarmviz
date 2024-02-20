@@ -129,7 +129,7 @@ import_button, wall_button, collision_button, export_metrics_button =
 	data_controls[1:2, 1:2] = [
 		Button(figure; label=l, halign=:left, width=w, height=27, font=:ui_font) for
 		(l, w) in zip(
-			["Import Tracking", "Import Wall", "Import Collisions", "Export All"],
+			["Import Movement", "Import Wall", "Import Collisions", "Export All"],
 			[120, 90, 120, 90],
 		)
 	]
