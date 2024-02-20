@@ -31,7 +31,7 @@ In the following, $\vec{x}_i(t)$ is the position vector of the ith agent at time
 $$\frac{1}{N} \left| \left| \sum_{i=1}^N \vec{n}_i(t) \right| \right|$$
 
 - **Rotational Order**
-$$\frac{1}{N} \left| \left| \sum_{i=1}^N \left( \vec{x}_i(t) - \frac{1}{N} \sum_{j=1}^N \vec{x}_j(t) \right) \times \vec{n}_i(t) \right| \right|$$
+$$\frac{1}{N} \left| \left| \sum_{i=1}^N \left( \vec{x}\_{i} (t) - \frac{1}{N} \sum_{j=1}^N \vec{x}\_j (t) \right) \times \vec{n}_i(t) \right| \right|$$
 
 For these first two also see *Zheng et. al. (2022)*.
 
@@ -56,7 +56,7 @@ $$\frac{4 \pi A(t)}{\sum_{i} \left| \left| \vec{h}_i (t) - \vec{h}_j (t)  \right
 
 The clustering is a [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering) based on a  dissimilarity matrix with entries constructed as follows:
 
-$$ d_{ij}(t) = 1 - \sqrt{\left(1 - \frac{\left| \left| \vec{x}_i - \vec{x}_j \right| \right| }{r_{\text{max}}}\right) \frac{\vec{n}_i \cdot \vec{n}_j +1}{2}}$$
+$$ d_{ij}(t) = 1 - \sqrt{\left(1 - \frac{\left| \left| \vec{x}\_i - \vec{x}\_j \right| \right| }{r_{\text{max}}}\right) \frac{\vec{n}\_i \cdot \vec{n}\_j +1}{2}}$$
 
 where
 
