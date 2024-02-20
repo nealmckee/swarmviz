@@ -31,7 +31,7 @@ In the following, $\vec{x}_i(t)$ is the position vector of the ith agent at time
 $$\frac{1}{N} \left| \left| \sum_{i=1}^N \vec{n}_i(t) \right| \right|$$
 
 - **Rotational Order**
-$$\frac{1}{N} \left| \left| \sum_{i=1}^N \left( \vec{x}_{i} (t) - \frac{1}{N} \sum_{j=1}^N \vec{x}_j (t) \right) \times \vec{n}_i(t) \right| \right|$$
+$$\frac{1}{N} \left| \left| \sum_{i=1}^N \left( \vec{x}\_{i} (t) - \frac{1}{N} \sum_{j=1}^N \vec{x}\_j (t) \right) \times \vec{n}_i(t) \right| \right|$$
 
 For these first two also see *Zheng et. al. (2022)*.
 
