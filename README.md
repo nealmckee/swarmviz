@@ -27,7 +27,7 @@ After you’re done, hit the export to button to choose a location for all the d
 ## Metrics and Clustering
 In the following, $\vec{x}_i(t)$ is the position vector of the ith agent at time t and $\vec{n}_i(t)$ is the unit heading vector of the ith agent. $N$ is the total number of agents, $\vec{h}_i(t)$ is the position vector of the ith vertex of the convex hull (ordered by adjacency).
 
-- **Polarization** 
+- **Polarization**
 $$\frac{1}{N} \left| \left| \sum_{i=1}^N \vec{n}_i(t) \right| \right|$$
 
 - **Rotational Order**
@@ -56,7 +56,7 @@ $$\frac{4 \pi A(t)}{\sum_{i} \left| \left| \vec{h}_i (t) - \vec{h}_j (t)  \right
 
 The clustering is a [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering) based on a  dissimilarity matrix with entries constructed as follows:
 
-$$ d_{ij}(t) = 1 - \sqrt{\left(1 - \frac{\left| \left| \vec{x}_i - \vec{x}_j \right| \right| }{r_{max}}\right) \frac{\vec{n}_i \cdot \vec{n}_j +1}{2}}$$
+$$ d_{ij}(t) = 1 - \sqrt{\left(1 - \frac{\left| \left| \vec{x}_i - \vec{x}_j \right| \right| }{r_{\text{max}}}\right) \frac{\vec{n}_i \cdot \vec{n}_j +1}{2}}$$
 
 where
 
@@ -66,7 +66,7 @@ $$ r_{max} = \max_{i,j,k,l,t_*} \sqrt{\left( x_{i,1}(t_1)-x_{j,1}(t_2) \right)^2
 
 ### Movement Data
 
-A single **.npy** file with **four** dimensions, respectively:
+A single file ending in **summaryd.npy** with **four** dimensions, respectively:
 
 *runs x agents x properties x time steps*
 
@@ -82,6 +82,21 @@ The first five properties need to be exactly the following, in the specified ord
 
 The Y-Coordinate as well as additional properties will be disregarded.
 
+### Collisions
+
+Two **.json** files with the same filename and location as the movement file, except replacing “summaryd.npy” with
+
+- aarefl.json for the agent-agent collisions
+- warefl.json for the agent-wall collisions
+
+respectively. They need to have the following internal structure:
+
+- an outer dictionary with the run number (zero indexed) as a string as keys and values in the form of
+  - a dictionary with the agent ID (zero indexed) as a string as keys and values in the form of
+    - a list of all time steps (integers, not time points!) where a collision of the respective type occurred
+
+Currently, only a single run is supported, so only the first run will be read.
+
 ### Wall/Enclosure Data (Optional)
 
 A single **.npy** with **four** dimensions, respectively:
@@ -96,21 +111,6 @@ Currently, only a single run is supported, so only the first run will be read.
 4. Z-Coordinate
 
 Time, the Y-coordinate as well as additional properties will be disregarded. The tool also assumes that there are no missing time steps, so the index in the tensor corresponds exactly.
-
-### Collisions
-
-Two **.json** files following the naming conventions
-
-- .*aarefl.json for the agent-agent collisions
-- .*warefl.json for the agent-wall collisions
-
-with the following internal structure:
-
-- an outer dictionary with the run number (zero indexed) as a string as keys and values in the form of
-  - a dictionary with the agent ID (zero indexed) as a string as keys and values in the form of
-    - a list of all time steps (integers, not time points!) where a collision of the respective type occurred
-
-Currently, only a single run is supported, so only the first run will be read.
 
 ## Output Specification
 
@@ -143,7 +143,9 @@ Currently, only a single run is supported, so only the first run will be read.
     - The pairwise **merges** of the clusterings (negative integers denote agent IDs (one indexed!), positive integers cluster IDs by order of creation), ascending by threshold, as “clustering_merges” in the shape *merges x IDs x time step*
     - The **ordering** of the leaves of the hierarchical clustering (“fast optimal ordering” by *Bar-Joseph et. al. (2001)*) as “clustering_order” in the shape *IDs x time steps*
 - **convex_hull.json** containing the locations of the vertices of the convex hull of all agents with the internal structure:
-    - TODO
+  - a list for each timestep where each entry is
+    - a list of vertices where each entry is
+      - a list with one X and one Z coordinate
 
 ## Development setup
 
