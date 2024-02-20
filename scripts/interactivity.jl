@@ -56,6 +56,16 @@ on(import_button.clicks) do c
 		minimum(data[].agents[:, Z, :]) - 100,
 		maximum(data[].agents[:, Z, :]) + 100,
 	)
+	# load and process the collision data if it’s present in the same directory
+	for (name, obs) in
+		zip(["warefl.json", "aarefl.json"], [wall_collisions, agent_collisions])
+		path = replace(tracking_path, "summaryd.npy" => name)
+		if isfile(path)
+			obs[] = process_collisions(path)
+		end
+	end
+	# adjust the limits of the collisions plot (and with that also the metrics plots)
+	xlims!(collisions_axis, 1, n_timesteps[])
 end
 
 on(wall_button.clicks) do c
@@ -65,25 +75,6 @@ on(wall_button.clicks) do c
 	wall_path == "" || (wall_data[] = analyse_wall(wall_path))
 	# adjust the limits of the animation to fit the new wall data
 	autolimits!(swarm_animation)
-end
-
-on(collision_button.clicks) do c
-	# on button press, opens a native file dialogue
-	collisions_folder = pick_folder()
-    collisions_folder == "" && return nothing
-	# parses the chosen directory for files with the ending specified in the readme
-	wall_collisons_path = filter(
-		x -> occursin(r".*warefl.json", x), readdir(collisions_folder; join=true)
-	)[1]
-	agent_collisons_path = filter(
-		x -> occursin(r".*aarefl.json", x), readdir(collisions_folder; join=true)
-	)[1]
-	# load and process the collision data
-	wall_collisions[] = process_collisions(wall_collisons_path)
-	agent_collisions[] = process_collisions(agent_collisons_path)
-	# adjust the limits of the plot to fit the new data
-	# (if it’s currently displayed)
-	autolimits!(collisions_axis)
 end
 
 on(export_metrics_button.clicks) do c
@@ -100,11 +91,11 @@ on(export_metrics_button.clicks) do c
 	Parquet2.writefile(
 		joinpath(export_folder, "metrics.parquet"), DataFrame(data[].metrics)
 	)
-    jldopen(joinpath(export_folder, "derived.jld2"), "w") do file
-        for (p,t) in tensors
-            file[p] = t
-        end
-        file["clustering/chosen_clustering_threshold"] = chosen_clustering_threshold
-    end
-    JSON3.write(joinpath(export_folder, "convex_hull.json"), data[].derived["Convex Hull"])
+	jldopen(joinpath(export_folder, "derived.jld2"), "w") do file
+		for (p, t) in tensors
+			file[p] = t
+		end
+		file["clustering/chosen_clustering_threshold"] = chosen_clustering_threshold
+	end
+	JSON3.write(joinpath(export_folder, "convex_hull.json"), data[].derived["Convex Hull"])
 end

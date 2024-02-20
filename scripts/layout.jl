@@ -91,7 +91,7 @@ agent_controls_upper[1, 1] = grid!(
 )
 manual_log_threshold = Textbox(
 	agent_controls_upper[1, 2];
-	placeholder="Enter Log Thresh.",
+	placeholder="Enter Log Threshold...",
 	# font=:ui_font,
 	tellwidth=false,
 	halign=:right,
@@ -99,7 +99,7 @@ manual_log_threshold = Textbox(
 	validator=Float64,
 )
 
-agent_controls_lower = GridLayout(agent_controls[2, 1], default_colgap = 6)
+agent_controls_lower = GridLayout(agent_controls[2, 1]; default_colgap=6)
 # the possible threshold values are adapted to the minimum and maximum in the current data
 heightrange = (@lift if isempty($data.clustering)
 	collect(-4:0.001:0)
@@ -125,13 +125,14 @@ colsize!(controls, 4, Auto())
 
 # buttons for IO
 data_controls = GridLayout(controls[1, 5]; default_rowgap=6, default_colgap=6)
-import_button, wall_button, collision_button, export_metrics_button =
-	data_controls[1:2, 1:2] = [
+import_button =
+	data_controls[1:2, 1] = Button(
+		figure; label="Import\nMovement", halign=:left, width=90, height=60, font=:ui_font
+	)
+wall_button, export_metrics_button =
+	data_controls[1:2, 2] = [
 		Button(figure; label=l, halign=:left, width=w, height=27, font=:ui_font) for
-		(l, w) in zip(
-			["Import Movement", "Import Wall", "Import Collisions", "Export All"],
-			[120, 90, 120, 90],
-		)
+		(l, w) in zip(["Import Wall", "Export All"], [90, 90])
 	]
 
 # METRIC PLOTS
