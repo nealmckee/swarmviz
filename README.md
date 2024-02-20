@@ -30,27 +30,33 @@ In the following, $\vec{x}_i(t)$ is the position vector of the ith agent at time
 - **Polarization** 
 $$\frac{1}{N} \left| \left| \sum_{i=1}^N \vec{n}_i(t) \right| \right|$$
 
-- **Rotational Order** $\frac{1}{N} \left| \left| \sum_{i=1}^N \left( \vec{x}_i(t) - \frac{1}{N} \sum_{j=1}^N \vec{x}_j(t) \right) \times \vec{n}_i(t) \right| \right|$
+- **Rotational Order**
+$$\frac{1}{N} \left| \left| \sum_{i=1}^N \left( \vec{x}_i(t) - \frac{1}{N} \sum_{j=1}^N \vec{x}_j(t) \right) \times \vec{n}_i(t) \right| \right|$$
 
 For these first two also see *Zheng et. al. (2022)*.
 
 - **Mean Interindividual Distance** (IID) 
 
-$$\frac{2}{N(N-1)} \sum_{i=1}^N \sum_{0<j<i} \left| \left| \vec{x}_i(t) - \vec{x}_j(t) \right| \right|$$
+$$\frac{2}{N(N-1)} \sum_{i=1}^N \sum_{0 \lt j \lt i} \left| \left| \vec{x}_i(t) - \vec{x}_j(t) \right| \right|$$
 
-- **Mean Minimum IID** $\frac{1}{N} \sum_{i=1}^N \min_{j \neq i} \left| \left| \vec{x}_i(t) - \vec{x}_j(t)\right| \right|$
+- **Mean Minimum IID** 
+$$\frac{1}{N} \sum_{i=1}^N \min_{j \neq i} \left| \left| \vec{x}_i(t) - \vec{x}_j(t)\right| \right|$$
 
-- **MaxMin IID** $\max_i \min_{j \neq i} \left| \left| \vec{x}_i(t) - \vec{x}_j(t)\right| \right|$
+- **MaxMin IID**
+$$\max_i \min_{j \neq i} \left| \left| \vec{x}_i(t) - \vec{x}_j(t)\right| \right|$$
 
-- **Diameter** $\max_{i, j}  \left| \left| \vec{x}_i(t) - \vec{x}_j(t)\right| \right|$
+- **Diameter**
+$$\max_{i, j}  \left| \left| \vec{x}_i(t) - \vec{x}_j(t)\right| \right|$$
 
-- **Area** $A(t) = \frac{1}{2} \sum_{i} \left( h_{i,1}(t) h_{j,2}(t) - h_{j, 1}(t) h_{i,2}(t) \right)$ where $j = (i \mod N) + 1$
+- **Area**
+$$A(t) = \frac{1}{2} \sum_{i} \left( h_{i,1}(t) h_{j,2}(t) - h_{j, 1}(t) h_{i,2}(t) \right), \quad j = (i \mod N) + 1$$
 
-- **Roundness** $\frac{4 \pi A(t)}{\sum_{i} \left| \left| \vec{h}_i(t) - \vec{h}_j(t)  \right| \right|}$ where $j = (i \mod N) + 1$
+- **Roundness** 
+$$\frac{4 \pi A(t)}{\sum_{i} \left| \left| \vec{h}_i(t) - \vec{h}_j(t)  \right| \right|}, \quad j = (i \mod N) + 1$$
 
 The clustering is a [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering) based on a  dissimilarity matrix with entries constructed as follows:
 
-$$ d_{ij}(t) = 1 - \sqrt{\left(1 - \frac{\left| \left| \vec{x}_i - \vec{x}_j \right| \right|}{r_{max}}\right) \frac{\vec{n}_i \cdot \vec{n}_j +1}{2}}$$
+$$ d_{ij}(t) = 1 - \sqrt{\left(1 - \frac{\left| \left| \vec{x}_i - \vec{x}_j \right| \right| }{r_{max}}\right) \frac{\vec{n}_i \cdot \vec{n}_j +1}{2}}$$
 
 where
 
