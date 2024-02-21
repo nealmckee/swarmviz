@@ -37,9 +37,9 @@ PALETTE = [ #TODO make const
 ]
 
 # load helper funtions
-include("src/metrics.jl")
-include("src/analysis.jl")
-include("src/dataprocessing.jl")
+include("metrics.jl")
+include("analysis.jl")
+include("dataprocessing.jl")
 
 """
 Struct that holds all the data input as well as everything we calculate.

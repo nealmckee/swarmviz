@@ -1,3 +1,8 @@
+name = "SwarmViz"
+uuid = "9520e688-e38d-4d48-8f1b-55d05961ac0a"
+authors = ["Neal McKee <mail@nealmckee.com>"]
+version = "0.1.0"
+
 [deps]
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
@@ -15,5 +20,4 @@ NativeFileDialog = "e1fe445b-aa65-4df4-81c1-2041507f0fd4"
 NoiseRobustDifferentiation = "470638dc-0858-4731-a73a-678bdc45695b"
 Parquet2 = "98572fba-bba0-415d-956f-fa77e587d26d"
 RelocatableFolders = "05181044-ff0b-4ac5-8273-598c1e38db00"
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
