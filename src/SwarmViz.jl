@@ -1,5 +1,7 @@
-using Colors
+module SwarmViz
+
 using DataFrames
+using Colors
 using Distances
 using GLMakie
 using JLD2
@@ -25,7 +27,7 @@ const HVX = 6
 const HVZ = 7
 const TRACKING_DIM = 5
 # operating system dependent path to the assets folder
-FONTFOLDER = RelocatableFolders.@path joinpath(@__DIR__, "assets") #TODO make const
+FONTFOLDER = RelocatableFolders.@path joinpath(@__DIR__, "..", "assets") #TODO make const
 # color vision deficiency friendly discrete color palette
 PALETTE = [ #TODO make const
 	colorant"#6f4fc6",
@@ -88,4 +90,6 @@ function julia_main()::Cint
 	# Display the resulting figure in its own window
 	display(figure);
 	return 0
+end
+
 end
