@@ -91,7 +91,7 @@ Two **.json** files with the same filename and location as the movement file, ex
 
 respectively. They need to have the following internal structure:
 
-- an outer dictionary with the run number (zero indexed) as a string as keys and values in the form of
+- an outer dictionary with the run number (zero indexed) as strings as keys and values in the form of
   - a dictionary with the agent ID (zero indexed) as a string as keys and values in the form of
     - a list of all time steps (integers, not time points!) where a collision of the respective type occurred
 

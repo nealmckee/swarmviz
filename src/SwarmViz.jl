@@ -14,7 +14,8 @@ using Parquet2
 using RelocatableFolders
 using Statistics
 
-# TODO julia_main function as app entry point
+# export the main function in case someone wants to run this as a script
+export swarmviz
 
 # constants for indexing as specified for the input data format in the readme
 const AGENTS = 1
@@ -28,9 +29,9 @@ const HVX = 6
 const HVZ = 7
 const TRACKING_DIM = 5
 # operating system dependent path to the assets folder
-FONTFOLDER = RelocatableFolders.@path joinpath(@__DIR__, "..", "assets") #TODO make const
+const FONTFOLDER = RelocatableFolders.@path joinpath(@__DIR__, "..", "assets")
 # color vision deficiency friendly discrete color palette
-PALETTE = [ #TODO make const
+const PALETTE = [
 	colorant"#6f4fc6",
 	colorant"#ffbb00",
 	colorant"#00a789",
@@ -58,7 +59,7 @@ struct SwarmData
 	clustering::Vector{Hclust{Float64}}
 end
 
-function julia_main()::Cint
+function swarmviz()::Cint
 	# Set up dummy observables
 	data = Observable(
 		SwarmData(
@@ -321,7 +322,9 @@ function julia_main()::Cint
 	)
 	linkxaxes!(metric_axes..., collisions_axis)
 
-	# TIMESTEP
+    ### INTERACTIVITY ###
+
+    # TIMESTEP
 
 	# starts animation loop on buttonpress, the plot then automatically updates
 	# as it’s dependent on the time slider
@@ -339,8 +342,6 @@ function julia_main()::Cint
 			end
 		end
 	end
-
-    ### INTERACTIVITY ###
 
 	# CONTROLS
 
@@ -569,7 +570,8 @@ function julia_main()::Cint
 	end
 
 	# Display the resulting figure in its own window
-	display(figure)
+	screen = display(figure)
+    wait(screen)
 	return 0
 end
 
