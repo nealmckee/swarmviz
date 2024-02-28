@@ -20,7 +20,7 @@ Install the Julia programming language from [julialang.org](julialang.org) or a 
 
 Open your terminal and navigate to the directory containing the Project.toml file. Then do
 
-```shell
+```sh
 julia
 using Pkg
 Pkg.activate(".")
@@ -35,7 +35,7 @@ Install the Julia programming language from [julialang.org](julialang.org) or a 
 
 Open your terminal and navigate to the directory containing the Project.toml file. Then do
 
-```shell
+```sh
 julia
 using Pkg
 Pkg.add("PackageCompiler")
@@ -189,8 +189,9 @@ Install the current version of the Julia programming language from your preferre
 
 ```sh
 julia
-] activate .
-instantiate
+using Pkg
+Pkg.activate(".")
+Pkg.instantiate()
 ```
 
 ## Accessibility
