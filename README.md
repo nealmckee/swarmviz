@@ -8,11 +8,44 @@ Interactively visualize tracking or simulated data of collective movement while 
 
 ## Installation
 
-TODO compile and upload
+### Compiled Binaries
+
+Download the binary for your operating system from the TU-Berlin DepositOnce. Unpack the archive to a location of your choice, then navigate to ```SwarmViz/bin``` and double-click on the executable named ```SwarmViz```.
+
+Depending on what libraries are installed on your system, it might be necessary to download additional dependencies on startup. On some operating systems you are not notified of this in any way. Make sure you have an active internet connection and wait for several minutes for the download to finish.
+
+### Running as a Script
+
+Install the Julia programming language from [julialang.org](julialang.org) or a package manager of your choice and add it to your path. Clone this repository.
+
+Open your terminal and navigate to the directory containing the Project.toml file. Then do
+
+```shell
+julia
+using Pkg
+Pkg.activate(".")
+Pkg.instantiate()
+using SwarmViz
+swarmviz();
+```
+
+### Compiling from Source
+
+Install the Julia programming language from [julialang.org](julialang.org) or a package manager of your choice and add it to your path. Clone this repository.
+
+Open your terminal and navigate to the directory containing the Project.toml file. Then do
+
+```shell
+julia
+using Pkg
+Pkg.add("PackageCompiler")
+using PackageCompiler
+Pkg.activate(".")
+Pkg.instantiate()
+create_app(".", "path_to_directory_to_compile_to"; incremental=true, executables=["NameOfYourChoice" => "swarmviz"])
+```
 
 ## Usage
-
-TODO startup
 
 Use the import buttons to load movement data as well as collisions and enclosures matching the specification described in a section below (calculating all metrics might take a moment depending on your system specifications).
 
@@ -21,6 +54,8 @@ Select metrics to monitor from the dropdown menus above the three (empty) graphs
 Either use the “Time Step” slider to move through the data or press the “PLAY” button start playing back the experiment or simulation. The time step slider stays reactive during this and FPS as well as a number of time steps to skip between each frame can be adjusted.
 
 Toggle additional visualization such as the convex hull, collisions or clustering any time. Choose a threshold for the clustering using the slider or enter a specific value in the box above.
+
+See the [Makie documentation](https://docs.makie.org/stable/reference/blocks/axis/index.html#axis_interaction) for additional ways to interact with any of the plots.
 
 After you’re done, hit the export to button to choose a location for all the data that was created.
 
@@ -56,11 +91,11 @@ $$\frac{4 \pi A(t)}{\sum_{i} \left| \left| \vec{h}_i (t) - \vec{h}_j (t)  \right
 
 The clustering is a [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering) based on a  dissimilarity matrix with entries constructed as follows:
 
-$$ d_{ij}(t) = 1 - \sqrt{\left(1 - \frac{\left| \left| \vec{x}\_i - \vec{x}\_j \right| \right| }{r_{\text{max}}}\right) \frac{\vec{n}\_i \cdot \vec{n}\_j +1}{2}}$$
+$$ d_{ij}(t) = 1 - \sqrt{\left(1 - \frac{\left| \left| \vec{x}\_i(t) - \vec{x}\_j(t) \right| \right| }{r_{\text{max}}}\right) \frac{\vec{n}\_i(t) \cdot \vec{n}\_j(t) +1}{2}}$$
 
 where
 
-$$ r_{max} = \max_{i,j,k,l,t_*} \sqrt{\left( x_{i,1}(t_1)-x_{j,1}(t_2) \right)^2 + \left( x_{i,2}(t_3)-x_{j,2}(t_4) \right)^2} $$
+$$ r_{max} = \max_{i,j,k,l,t_*} \sqrt{\left( x_{i,1}(t_1)-x_{j,1}(t_2) \right)^2 + \left( x_{k,2}(t_3)-x_{l,2}(t_4) \right)^2} $$
  
 ## Input Specification
 
@@ -174,6 +209,10 @@ Distributed under the MIT-license. See ``LICENSE`` for more information.
 3. Commit your changes (`git commit -am 'Add some fooBar'`)
 4. Push to the branch (`git push origin feature/fooBar`)
 5. Create a new Pull Request
+
+## Cite this
+
+See TU-Berlin DepositOnce.
 
 ## Citations
 
