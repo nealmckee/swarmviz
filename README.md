@@ -4,7 +4,7 @@
 
 Interactively visualize tracking or simulated data of collective movement while monitoring an array of useful metrics. Includes a hierarchical clustering based on distance and orientation as and supports both automatic playback and scrubbing through the time steps. All calculated data can be exported into modern file formats for further analysis.
 
-![](assets/interface.png)
+![A screenshot of the GUI with data loaded.](assets/interface.png)
 
 ## Installation
 
@@ -60,6 +60,7 @@ See the [Makie documentation](https://docs.makie.org/stable/reference/blocks/axi
 After you’re done, hit the export to button to choose a location for all the data that was created.
 
 ## Metrics and Clustering
+
 In the following, $\vec{x}_i(t)$ is the position vector of the ith agent at time t and $\vec{n}_i(t)$ is the unit heading vector of the ith agent. $N$ is the total number of agents, $\vec{h}_i(t)$ is the position vector of the ith vertex of the convex hull (ordered by adjacency).
 
 - **Polarization**
@@ -70,11 +71,11 @@ $$\frac{1}{N} \left| \left| \sum_{i=1}^N \left( \vec{x}\_{i} (t) - \frac{1}{N} \
 
 For these first two also see *Zheng et. al. (2022)*.
 
-- **Mean Interindividual Distance** (IID) 
+- **Mean Interindividual Distance** (IID)
 
 $$\frac{2}{N(N-1)} \sum_{i=1}^N \sum_{0 \lt j \lt i} \left| \left| \vec{x}_i(t) - \vec{x}_j(t) \right| \right|$$
 
-- **Mean Minimum IID** 
+- **Mean Minimum IID**
 $$\frac{1}{N} \sum_{i=1}^N \min_{j \neq i} \left| \left| \vec{x}_i(t) - \vec{x}_j(t)\right| \right|$$
 
 - **MaxMin IID**
@@ -86,17 +87,17 @@ $$\max_{i, j}  \left| \left| \vec{x}_i(t) - \vec{x}_j(t)\right| \right|$$
 - **Area**
 $$A(t) = \frac{1}{2} \sum_{i} \left( h_{i,1}(t) h_{j,2}(t) - h_{j, 1}(t) h_{i,2}(t) \right), \quad j = (i \mod N) + 1$$
 
-- **Roundness** 
+- **Roundness**
 $$\frac{4 \pi A(t)}{\sum_{i} \left| \left| \vec{h}_i (t) - \vec{h}_j (t)  \right| \right| }, \quad j = (i \mod N) + 1$$
 
-The clustering is a [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering) based on a  dissimilarity matrix with entries constructed as follows:
+The clustering is a [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering) based on a dissimilarity matrix with entries constructed as follows:
 
 $$ d_{ij}(t) = 1 - \sqrt{\left(1 - \frac{\left| \left| \vec{x}\_i(t) - \vec{x}\_j(t) \right| \right| }{r_{\text{max}}}\right) \frac{\vec{n}\_i(t) \cdot \vec{n}\_j(t) +1}{2}}$$
 
 where
 
 $$ r_{max} = \max_{i,j,k,l,t_*} \sqrt{\left( x_{i,1}(t_1)-x_{j,1}(t_2) \right)^2 + \left( x_{k,2}(t_3)-x_{l,2}(t_4) \right)^2} $$
- 
+
 ## Input Specification
 
 ### Movement Data
@@ -219,5 +220,3 @@ See TU-Berlin DepositOnce.
 Zheng Y, Huepe C, Han Z. Experimental capabilities and limitations of a position-based control algorithm for swarm robotics. Adaptive Behavior. 2022;30(1):19-35. doi:10.1177/1059712320930418
 
 Ziv Bar-Joseph, David K. Gifford, Tommi S. Jaakkola, Fast optimal leaf ordering for hierarchical clustering , Bioinformatics, Volume 17, Issue suppl_1, June 2001, Pages S22–S29, <https://doi.org/10.1093/bioinformatics/17.suppl_1.S22>
-
-<!-- Markdown link & img dfn's -->
