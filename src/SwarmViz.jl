@@ -1,4 +1,4 @@
-# module SwarmViz
+module SwarmViz
 
 import AlgebraOfGraphics: set_aog_theme!
 using Colors
@@ -15,7 +15,7 @@ using RelocatableFolders
 using Statistics
 
 # export the main function in case someone wants to run this as a script
-# export swarmviz
+export swarmviz
 
 # constants for indexing as specified for the input data format in the readme
 const AGENTS = 1
@@ -611,6 +611,4 @@ function swarmviz()::Cint
 	return 0
 end
 
-# end
-
-swarmviz()
+end
