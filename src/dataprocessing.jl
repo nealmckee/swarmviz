@@ -24,10 +24,10 @@ function derived2tensors(data)
 end
 
 function cluster_coloring_obs(
-	data, timestep, log_threshold, agent_toggles, discrete_palette
+	data, timestep, log_threshold, animation_toggles, discrete_palette
 )
 	return @lift (
-		if !$(agent_toggles[2].active) || data[].clustering == []
+		if !$(animation_toggles[6].active) || data[].clustering == []
 			repeat([RGBA(0, 0, 0, 1)], size($data.agents, 1))
 		else
 			$discrete_palette[collect(
@@ -40,20 +40,18 @@ end
 function recent_collision(collisions, agent_index, timestep_value, skip_value)
 	!checkbounds(Bool, collisions, 1, timestep_value) && return false
 	collision_occured = any(
-		collisions[
-			agent_index, max((timestep_value - skip_value), 1):(timestep_value)
-		],
+		collisions[agent_index, max((timestep_value - skip_value), 1):(timestep_value)]
 	)
 	return collision_occured
 end
 
 function collision_coloring_obs(
-	data, agent_collisions, wall_collisions, timestep, skip, agent_toggles
+	data, agent_collisions, wall_collisions, timestep, skip, animation_toggles
 )
 	return @lift (
 		if size($agent_collisions, 1) != size($data.agents, 1) ||
 			size($wall_collisions, 1) != size($data.agents, 1) ||
-			!$(agent_toggles[1].active)
+			!$(animation_toggles[4].active)
 			repeat([RGBA(0, 0, 0, 0)], size($data.agents, 1))
 		else
 			[

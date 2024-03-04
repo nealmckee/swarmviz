@@ -1,4 +1,4 @@
-module SwarmViz
+# module SwarmViz
 
 import AlgebraOfGraphics: set_aog_theme!
 using Colors
@@ -15,7 +15,7 @@ using RelocatableFolders
 using Statistics
 
 # export the main function in case someone wants to run this as a script
-export swarmviz
+# export swarmviz
 
 # constants for indexing as specified for the input data format in the readme
 const AGENTS = 1
@@ -61,6 +61,7 @@ end
 
 function swarmviz()::Cint
 	# Set up dummy observables
+	current_filename = Observable("Press “Import Movement” to load data")
 	data = Observable(
 		SwarmData(
 			zeros(1, TRACKING_DIM + 2, 1),
@@ -81,7 +82,7 @@ function swarmviz()::Cint
 	isplaying = Observable(false)
 	discrete_palette = Observable(PALETTE)
 
-    # set the theme for the whole app
+	# set the theme for the whole app
 	set_aog_theme!()
 	update_theme!(;
 		colormap=:batlow,
@@ -155,7 +156,7 @@ function swarmviz()::Cint
 		size=(960, 600),
 	)
 
-    ### LAYOUT ###
+	### LAYOUT ###
 
 	# set the title of the window that opens upon execution of the main script
 	GLMakie.activate!(; title="SwarmViz")
@@ -171,18 +172,32 @@ function swarmviz()::Cint
 	)
 
 	# create the four high level areas of the layout
-	swarm_animation = Axis(
-		figure[1, 1]; xlabel="X", ylabel="Z", autolimitaspect=1, alignmode=Outside()
-	)
+	swarm_grid = GridLayout(figure[1, 1])
 	metrics_grid = GridLayout(figure[1, 2]; alignmode=Outside())
 	time_grid = GridLayout(figure[2, 1:2])
-	controls = GridLayout(figure[3, 1:2])
+	controls = GridLayout(figure[3, 1:2]; default_colgap=12)
 
 	#adjust the width of the columns
 	colsize!(figure.layout, 1, Relative(0.5))
 	colsize!(figure.layout, 2, Relative(0.5))
 
-	# TIMETEP
+	# SWARM ANIMATION
+
+	# create the label that displays the current filename
+	Label(
+		swarm_grid[1, 1];
+		text=current_filename,
+		font=:ui_font,
+		tellwidth=false,
+		halign=:left,
+	)
+
+	# create the axes for the swarm animation
+	swarm_animation = Axis(
+		swarm_grid[2, 1]; xlabel="X", ylabel="Z", autolimitaspect=1, alignmode=Outside()
+	)
+
+	# TIMESTEP
 
 	# create the sliders that controls the current timestep together
 	# with custom labels that allow changing the font
@@ -220,49 +235,34 @@ function swarmviz()::Cint
 	# make this column resize with the window but take up exactly 25% of the width
 	colsize!(controls, 2, Relative(0.25))
 
+	agent_controls = GridLayout(controls[1, 3]; default_rowgap=3, default_colgap=6)
+
 	# toggles to display the convex hull, center and diameter of the swarm
-	animation_toggles = [Toggle(figure) for _ in 1:3]
-	controls[1, 3] = grid!(
+	agent_toggles = [Toggle(figure) for _ in 1:6]
+	agent_controls[1, 1] = grid!(
 		hcat(
+			[Label(figure, l; halign=:left, font=:ui_font) for l in ["Center", "Diameter"]],
+			agent_toggles[1:2],
 			[
 				Label(figure, l; halign=:left, font=:ui_font) for
-				l in ["Convex Hull", "Center", "Diameter"]
+				l in ["Convex Hull", "Collisions"]
 			],
-			animation_toggles,
+			agent_toggles[3:4],
+			[
+				Label(figure, l; halign=:left, font=:ui_font) for
+				l in ["Labels", "Clustering"]
+			],
+			agent_toggles[5:6],
 		);
 		default_rowgap=3,
 		default_colgap=6,
 		tellheight=true,
-	)
-
-	# toggles to control what is displayed on the agent markers in the animation
-	# as well as which threshold is applied to the hierarchical clustering for the coloring
-	agent_controls = GridLayout(controls[1, 4]; default_rowgap=3)
-	agent_controls_upper = GridLayout(agent_controls[1, 1]; default_rowgap=3)
-	agent_toggles = [Toggle(figure) for _ in 1:2]
-	agent_controls_upper[1, 1] = grid!(
-		hcat(
-			[
-				Label(figure, l; halign=:left, font=:ui_font) for
-				l in ["Collisions", "Clustering"]
-			],
-			agent_toggles,
-		);
-		default_rowgap=3,
-		default_colgap=3,
+		tellwidth=false,
 		halign=:left,
 	)
-	manual_log_threshold = Textbox(
-		agent_controls_upper[1, 2];
-		placeholder="Enter Log Threshold...",
-		# font=:ui_font,
-		tellwidth=false,
-		halign=:right,
-		reset_on_defocus=true,
-		validator=Float64,
-	)
 
-	agent_controls_lower = GridLayout(agent_controls[2, 1]; default_colgap=6)
+	threshold_controls = GridLayout(agent_controls[2, 1]; default_colgap=6)
+
 	# the possible threshold values are adapted to the minimum and maximum in the current data
 	heightrange = (@lift if isempty($data.clustering)
 		collect(-4:0.001:0)
@@ -274,24 +274,35 @@ function swarmviz()::Cint
 			sigdigits=3,
 		)
 	end)
+
+	Label(threshold_controls[1, 1], "Log Threshold"; halign=:left, font=:ui_font)
 	log_threshold = Slider(
-		agent_controls_lower[1, 2];
+		threshold_controls[1, 2];
 		range=heightrange,
 		startvalue=(@lift minimum($heightrange)),
 	)
-	Label(agent_controls_lower[1, 1], "Log Threshold"; halign=:left, font=:ui_font)
 	Label(
-		agent_controls_lower[1, 3],
+		threshold_controls[1, 3],
 		@lift string($(log_threshold.value));
 		halign=:right,
 		font=:ui_font,
-		width=25,
+		width=40,
 	)
+	manual_log_threshold = Textbox(
+		agent_controls[1:2, 2];
+		placeholder="Enter Value",
+		tellwidth=true,
+		halign=:right,
+		reset_on_defocus=true,
+		validator=Float64,
+		valign=:bottom,
+	)
+
 	# make this column resize with the window and take up all remaining available space
-	colsize!(controls, 4, Auto())
+	colsize!(controls, 3, Auto())
 
 	# buttons for IO
-	data_controls = GridLayout(controls[1, 5]; default_rowgap=6, default_colgap=6)
+	data_controls = GridLayout(controls[1, 4]; default_rowgap=6, default_colgap=6)
 	import_button =
 		data_controls[1:2, 1] = Button(
 			figure;
@@ -322,9 +333,9 @@ function swarmviz()::Cint
 	)
 	linkxaxes!(metric_axes..., collisions_axis)
 
-    ### INTERACTIVITY ###
+	### INTERACTIVITY ###
 
-    # TIMESTEP
+	# TIMESTEP
 
 	# starts animation loop on buttonpress, the plot then automatically updates
 	# as it’s dependent on the time slider
@@ -355,11 +366,12 @@ function swarmviz()::Cint
 	on(import_button.clicks) do c
 		# on button press, opens a native file dialogue
 		tracking_path = pick_file(; filterlist="npy")
+		# then, if the dialog wasn’t cancelled, loads and analyses the chosen .npy file
+		tracking_path == "" && return nothing
 		# preemptively set the timestep to 1
 		# as the plots will be redrawn immediately after changing the data observable
 		set_close_to!(timestep, 1)
-		# then, if the dialog wasn’t cancelled, loads and analyses the chosen .npy file
-		tracking_path == "" && return nothing
+		# load and process the tracking data
 		data[] = analyse_tracking(tracking_path)
 		discrete_palette[] = vcat(
 			RGB.(PALETTE),
@@ -375,10 +387,14 @@ function swarmviz()::Cint
 		# (with padding for the swarm animation)
 		limits!(
 			swarm_animation,
-			minimum(data[].agents[:, X, :]) - 100,
-			maximum(data[].agents[:, X, :]) + 100,
-			minimum(data[].agents[:, Z, :]) - 100,
-			maximum(data[].agents[:, Z, :]) + 100,
+			minimum(data[].agents[:, X, :]) +
+			0.05 * reduce(-, collect(extrema(data[].agents[:, X, :]))),
+			maximum(data[].agents[:, X, :]) -
+			0.05 * reduce(-, collect(extrema(data[].agents[:, X, :]))),
+			minimum(data[].agents[:, Z, :]) +
+			0.05 * reduce(-, collect(extrema(data[].agents[:, Z, :]))),
+			maximum(data[].agents[:, Z, :]) -
+			0.05 * reduce(-, collect(extrema(data[].agents[:, Z, :]))),
 		)
 		# load and process the collision data if it’s present in the same directory
 		for (name, obs) in
@@ -388,8 +404,11 @@ function swarmviz()::Cint
 				obs[] = process_collisions(path)
 			end
 		end
+
 		# adjust the limits of the collisions plot (and with that also the metrics plots)
 		xlims!(collisions_axis, 1, n_timesteps[])
+		# update the filename label
+		current_filename[] = basename(tracking_path)[1:(end - 4)]
 	end
 
 	on(wall_button.clicks) do c
@@ -426,7 +445,7 @@ function swarmviz()::Cint
 		)
 	end
 
-    ### PLOTTING ###
+	### PLOTTING ###
 
 	# ANIMATION
 
@@ -457,6 +476,23 @@ function swarmviz()::Cint
 		glowwidth=glow_scale,
 	)
 
+	# add labels to the agents when the clustering toggle is active
+	agent_labels = text!(
+		swarm_animation,
+		x,
+		y;
+		text=(@lift string.(axes($data.agents, 1))),
+		color=:black,
+		fontsize=(@lift $marker_scale * 5),
+		font=:regular,
+		align=(:center, :center),
+		offset=(@lift ($marker_scale, -$marker_scale) .* 5),
+		justification=:center,
+		strokecolor=:white,
+		strokewidth=1,
+	)
+	connect!(agent_labels.visible, agent_toggles[5].active)
+
 	# Plot the wall of the enclosure
 	wall_vertices = @lift Point2f.($wall_data[1, :], $wall_data[2, :])
 	poly!(
@@ -480,7 +516,7 @@ function swarmviz()::Cint
 		linestyle=:dash,
 		closed=true,
 	)
-	connect!(surrounding_polygon.visible, animation_toggles[1].active)
+	connect!(surrounding_polygon.visible, agent_toggles[1].active)
 
 	# plot the center of mass and connect to toggle
 	center_of_mass = scatter!(
@@ -490,7 +526,7 @@ function swarmviz()::Cint
 		markersize=12,
 		marker=:xcross,
 	)
-	connect!(center_of_mass.visible, animation_toggles[2].active)
+	connect!(center_of_mass.visible, agent_toggles[2].active)
 
 	#plot the diameter and connect to toggle
 	diameter = lines!(
@@ -508,7 +544,7 @@ function swarmviz()::Cint
 		color="#8f8f8f",
 		linewidth=1,
 	)
-	connect!(diameter.visible, animation_toggles[3].active)
+	connect!(diameter.visible, agent_toggles[3].active)
 
 	# METRICS
 
@@ -561,7 +597,7 @@ function swarmviz()::Cint
 		enumerate(zip([wall_collisions, agent_collisions], [PALETTE[4], PALETTE[5]]))
 	]
 	for p in collision_plots
-		connect!(p.visible, agent_toggles[1].active)
+		connect!(p.visible, agent_toggles[4].active)
 	end
 
 	# plot timestep markers in metrics and collision axes
@@ -571,8 +607,10 @@ function swarmviz()::Cint
 
 	# Display the resulting figure in its own window
 	screen = display(figure)
-    wait(screen)
+	wait(screen)
 	return 0
 end
 
-end
+# end
+
+swarmviz()
