@@ -10,7 +10,7 @@ Interactively visualize tracking or simulated data of collective movement while 
 
 ### Compiled Binaries
 
-Download the binary for your operating system from the TU-Berlin DepositOnce. Unpack the archive to a location of your choice, then navigate to ```SwarmViz/bin``` and double-click on the executable named ```SwarmViz```.
+Download the binary for your operating system from the [TU-Berlin DepositOnce](https://doi.org/10.14279/depositonce-20001). Unpack the archive to a location of your choice, then navigate to ```SwarmViz/bin``` and double-click on the executable named ```SwarmViz```.
 
 Depending on what libraries are installed on your system, it might be necessary to download additional dependencies on startup. On some operating systems you are not notified of this in any way. Make sure you have an active internet connection and wait for several minutes for the download to finish.
 
@@ -214,7 +214,7 @@ Distributed under the MIT-license. See ``LICENSE`` for more information.
 
 ## Cite this
 
-See TU-Berlin DepositOnce.
+McKee, N. SwarmViz. Files at <https://doi.org/10.14279/DEPOSITONCE-20001> (2024).
 
 ## Citations
 
