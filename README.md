@@ -88,7 +88,7 @@ $$\max_{i, j}  \left| \left| \vec{x}_i(t) - \vec{x}_j(t)\right| \right|$$
 $$A(t) = \frac{1}{2} \sum_{i} \left( h_{i,1}(t) h_{j,2}(t) - h_{j, 1}(t) h_{i,2}(t) \right), \quad j = (i \mod N) + 1$$
 
 - **Roundness**
-$$\frac{4 \pi A(t)}{\sum_{i} \left| \left| \vec{h}_i (t) - \vec{h}_j (t)  \right| \right| }, \quad j = (i \mod N) + 1$$
+$$\frac{4 \pi A(t)}{\left( \sum_{i} \left| \left| \vec{h}_i (t) - \vec{h}_j (t)  \right| \right| \right)^2 }, \quad j = (i \mod N) + 1$$
 
 The clustering is a [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering) based on a dissimilarity matrix with entries constructed as follows:
 
